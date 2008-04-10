@@ -1,0 +1,280 @@
+package org.lqc.jxc;
+
+import java_cup.runtime.*;
+
+import org.lqc.jxc.types.*;
+import org.lqc.jxc.tokens.*;
+
+import java.util.List;
+import java.util.Vector;
+
+parser code {:
+	
+	public void syntax_error(Symbol token)
+	{
+		StringBuffer bf = new StringBuffer("[ERROR]");
+			
+		bf.append(" Line ");
+		bf.append(token.left+1);
+		bf.append(", column ");
+		bf.append(token.right+1);
+		bf.append(": " + token.toString());
+					
+		System.out.println(bf);
+	}
+:};
+
+/* Some terminal signs */
+terminal SEMI,COLON;
+terminal LPAR, RPAR;
+terminal LCURLY, RCURLY;
+terminal EQUAL, EQEQ, NEQEQ;
+terminal LT, LTEQ, GT, GTEQ;
+terminal PLUS, MINUS, TIMES, DIVIDE, MODULO;
+terminal NEG, UPLUS, UMINUS, PLUSPLUS, MINUSMINUS;
+
+terminal LOGOR, LOGAND;
+
+terminal Integer INT;
+terminal Double REAL;
+terminal Boolean BOOLEAN;
+terminal String STRING;
+terminal String ID;
+
+terminal IF;
+terminal ELSE;
+terminal FOR;
+terminal WHILE;
+terminal RETURN;
+
+terminal Type TYPE;
+
+non terminal ConstantExpr constant;
+
+/* Function lists */
+non terminal Program prog;
+non terminal List<FunctionDecl> func_list;
+non terminal FunctionDecl func_decl;
+
+/* Argument lists */
+non terminal List<Declaration> arg_dlist;
+non terminal List<Declaration> arg_dlist_ne;
+non terminal Declaration arg_decl;
+
+non terminal List<Instruction> instr_list;
+non terminal Instruction instr;
+non terminal ComplexInstr complex_instr;
+non terminal Instruction assign_instr;
+
+non terminal List<Declaration> var_decl;
+non terminal List<Pair<String,Expression>> declarator_list;
+non terminal Pair<String,Expression> declarator;
+
+non terminal Expression expr;
+non terminal Expression bool_expr_or, bool_expr_and, bool_expr_cmp, bool_expr_rel; 
+non terminal Expression num_expr_add, num_expr_mul, unary_expr, simple_expr;
+
+non terminal List<Expression> expr_list;
+
+non terminal CondInstr cond_instr;
+non terminal LoopInstr loop_instr;
+non terminal ReturnInstr return_instr;
+
+precedence left PLUS, MINUS;
+precedence left TIMES, DIVIDE, MODULO;
+precedence left UMINUS, UPLUS, NEG;
+precedence left ELSE;
+
+prog ::= func_list:fl {: RESULT = new Program("program", fl); :};
+
+func_list ::= func_list:fl func_decl:fd {: 
+				RESULT = fl;
+				RESULT.add(fd); :} |
+			  func_decl:fd {:
+			    RESULT = new Vector<FunctionDecl>();
+			    RESULT.add(fd); :}
+;
+
+arg_dlist ::= arg_dlist_ne:al {: RESULT = al; :} | 
+						      {: RESULT = new Vector<Declaration>(); :}; 
+						      
+arg_dlist_ne ::= arg_dlist_ne:al COLON arg_decl:arg	{: al.add(arg); RESULT = al; :} | 
+				 arg_decl:arg {: RESULT = new Vector<Declaration>(); 
+				                 RESULT.add(arg); 
+				              :};
+
+
+arg_decl ::= TYPE:type ID:id {: RESULT = new Declaration(type, id); :};
+
+/* Function Declaration */
+func_decl ::= TYPE:rt ID:fid LPAR arg_dlist:args RPAR complex_instr:ci {:
+				List<Type> type_list = new Vector<Type>();
+				List<String> id_list = new Vector<String>();
+				for(Declaration d : args) {
+				       type_list.add(d.getType());
+				       id_list.add(d.getID());
+				}
+				FunctionType ft = new FunctionType(rt, type_list);				
+				RESULT = new FunctionDecl(ft, fid, id_list, ci);
+			:}
+;
+
+/*** INSTRUCTIONS ***/
+
+instr_list ::= instr:i {:
+					RESULT = new Vector<Instruction>();
+					RESULT.add(i); :} |
+			   var_decl:vd {:
+			   		RESULT = new Vector<Instruction>();
+			   		RESULT.addAll(vd); :} |
+			   instr_list:ilist instr:i {:
+			   		ilist.add(i);
+			   		RESULT = ilist; :} |
+			   instr_list:ilist var_decl:vd {:
+			   		RESULT = ilist;
+			   		ilist.addAll(vd); :}
+;
+
+instr ::= complex_instr:ci {: RESULT = ci; :} |		  
+		  expr:e SEMI {: RESULT = e; :} |
+		  assign_instr:i SEMI {: RESULT = i; :} |
+		  cond_instr:i {: RESULT = i; :} | 
+		  loop_instr:i {: RESULT = i; :} |
+		  return_instr:i {: RESULT = i; :}  
+;
+
+
+assign_instr ::= ID:id EQUAL expr:e {: 
+					RESULT = new AssignmentInstr(id, e); :} |
+				 ID:id PLUSPLUS {:
+				 	RESULT = new FunctionCall("_INC", true, new VarExpr(id)); :} |
+				 ID:id MINUSMINUS {:
+				 	RESULT = new FunctionCall("_DEC", true, new VarExpr(id)); :}
+;
+
+cond_instr ::= IF LPAR expr:e RPAR instr:i {:
+				  RESULT = new CondInstr(e, i, Instruction.EMPTY); :} |
+			   IF LPAR expr:e RPAR instr:i1 ELSE instr:i2 {:
+			      RESULT = new CondInstr(e, i1, i2); :} 
+;
+
+loop_instr ::= WHILE LPAR expr:e RPAR instr:i {:
+				  RESULT = new LoopInstr(e, i, Instruction.EMPTY, Instruction.EMPTY); :} |
+			  FOR LPAR assign_instr:init SEMI expr:e SEMI assign_instr:post RPAR instr:body
+			  {:
+			  	RESULT = new LoopInstr(e, body, init, post); :}
+;
+
+return_instr ::= RETURN SEMI {: RESULT = new ReturnInstr(Expression.NULL); :} |
+				 RETURN expr:e SEMI {: RESULT = new ReturnInstr(e); :}
+;
+
+/** Complex instruction **/
+complex_instr ::= LCURLY instr_list:ilist RCURLY {:
+					RESULT = new ComplexInstr(ilist); :}
+;
+
+/** Variable declaration instruction **/
+var_decl ::= TYPE:t declarator_list:dlist SEMI {:
+			List<Declaration> nl = new Vector<Declaration>(dlist.size()); 					
+			for(Pair<String, Expression> decl : dlist) {
+				nl.add( new VarDecl(t, decl.first(), decl.second()));
+			};
+			RESULT = nl; 
+			:}
+;
+
+declarator_list ::= declarator:d {: 
+					    RESULT = new Vector<Pair<String,Expression>>();
+					    RESULT.add(d); :} |
+					declarator_list:dlist COLON declarator:d {:
+					    dlist.add(d);
+					    RESULT = dlist; :}
+;
+
+declarator ::= ID:id {: 
+					RESULT = new Pair<String,Expression>(id, Expression.NULL); 
+					 :} |
+			   ID:id EQUAL expr:e {: 
+			        RESULT = new Pair<String,Expression>(id, e);
+			        :}
+;
+
+/*** EXPRESSIONS ***/
+expr ::= bool_expr_or:e {: RESULT =e; :};
+
+/** Boolean Expressions **/
+bool_expr_or ::= bool_expr_and:e {: RESULT = e; :} |
+                 bool_expr_or:e1 LOGOR bool_expr_and:e2 {:
+                      RESULT = new FunctionCall("_LOR", true, e1, e2); :}
+; 
+                      
+bool_expr_and ::= bool_expr_cmp:e {: RESULT = e; :} |
+                  bool_expr_and:e1 LOGAND bool_expr_cmp:e2 {:
+                      RESULT = new FunctionCall("_LAND", true, e1, e2); :}
+; 
+
+bool_expr_cmp ::= bool_expr_rel:e {: RESULT = e; :} |
+                  bool_expr_cmp:e1 EQEQ bool_expr_rel:e2 {:
+                      RESULT = new FunctionCall("_EQEQ", true, e1, e2); :} |
+                  bool_expr_cmp:e1 NEQEQ bool_expr_rel:e2 {:
+                      RESULT = new FunctionCall("_NEQEQ", true, e1, e2); :}                      
+; 
+
+bool_expr_rel ::= num_expr_add:e {: RESULT = e; :} |
+                  num_expr_add:e1 LT num_expr_add:e2 {:
+                      RESULT = new FunctionCall("_LT", true, e1, e2); :} |
+                  num_expr_add:e1 GT num_expr_add:e2 {:
+                      RESULT = new FunctionCall("_GT", true, e1, e2); :} |
+                  num_expr_add:e1 LTEQ num_expr_add:e2 {:
+                      RESULT = new FunctionCall("_LTEQ", true, e1, e2); :} |
+                  num_expr_add:e1 GTEQ num_expr_add:e2 {:
+                      RESULT = new FunctionCall("_GTEQ", true, e1, e2); :}
+;
+
+num_expr_add ::= num_expr_mul:e {: RESULT = e; :} |
+                  num_expr_add:e1 PLUS num_expr_mul:e2 {:
+                      RESULT = new FunctionCall("_ADD", true, e1, e2); :} |
+                  num_expr_add:e1 MINUS num_expr_mul:e2 {:
+                      RESULT = new FunctionCall("_SUB", true, e1, e2); :}
+;
+
+num_expr_mul ::= unary_expr:e {: RESULT = e; :} |
+                  num_expr_mul:e1 TIMES unary_expr:e2 {:
+                      RESULT = new FunctionCall("_TIMES", true, e1, e2); :} |
+                  num_expr_mul:e1 DIVIDE unary_expr:e2 {:
+                      RESULT = new FunctionCall("_DIVIDE", true, e1, e2); :} |
+                  num_expr_mul:e1 MODULO unary_expr:e2 {:
+                      RESULT = new FunctionCall("_DIVIDE", true, e1, e2); :}
+;
+
+unary_expr ::= simple_expr:e {: RESULT = e; :} |
+               NEG unary_expr:e {: 
+                   RESULT = new FunctionCall("_LNEG", true, e); :} |  
+               PLUS unary_expr:e {: 
+                   RESULT = new FunctionCall("_NUMID", true, e); :} %prec UPLUS |
+               MINUS unary_expr:e {: 
+                   RESULT = new FunctionCall("_NNEG", true, e); :} %prec UMINUS
+;
+
+simple_expr ::= ID:id {: RESULT = new VarExpr(id); :} |
+				ID:id LPAR expr_list:elist RPAR {:
+                	RESULT = new FunctionCall(id, false, elist); :} | 
+                ID:id LPAR RPAR {:
+                     RESULT = new FunctionCall(id, false); :} |
+                LPAR expr:e RPAR {: RESULT = e; :} |
+                constant:c {: RESULT = c; :} 
+;     
+
+expr_list ::= expr:e {: 
+				RESULT = new Vector<Expression>(); 
+				RESULT.add(e); :} |
+			  expr_list:elist COLON expr:e {:
+			    elist.add(e);
+			    RESULT = elist; :}
+;
+
+constant ::= INT:e {: RESULT = new ConstantExpr(e); :} | 
+			 REAL:e  {: RESULT = new ConstantExpr(e); :} |
+			 STRING:e {: RESULT = new ConstantExpr(e); :} |
+			 BOOLEAN:e {: RESULT = new ConstantExpr(e); :};                        
