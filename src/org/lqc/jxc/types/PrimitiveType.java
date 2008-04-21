@@ -25,15 +25,18 @@ public class PrimitiveType extends Type {
 	
 		throw new RuntimeException("Unknown primitive type: " + c);
 	}
-
-	@Override
-	public boolean isSupertypeOf(Type t) {
-		return this.equals(t);
-	}
 	
 	@Override
 	public String toString() {
 		return "p:"+ name;
+	}
+
+	public boolean isComparable(Type x) {
+		return x.equals(ANY) || x.equals(this);		
+	}
+
+	public boolean isGreaterEqual(Type x) {		
+		return x.equals(this);
 	}
 	
 	

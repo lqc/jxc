@@ -5,16 +5,19 @@ import java.util.List;
 import java.util.Vector;
 
 import org.lqc.jxc.tokens.Declaration;
+import org.lqc.jxc.tokens.FunctionDecl;
+import org.lqc.jxc.tokens.VarDecl;
 import org.lqc.jxc.types.Type;
+import org.lqc.util.POGraph;
 
 public class Environment {
 	
-	private HashMap<String, List<Declaration>> mappings;
+	private HashMap<String, POGraph<FunctionDecl>> fmap;
+	private HashMap<String, VarDecl> vmap;
 	private Environment parent;
 		
-	protected Environment() {
-		mappings = new HashMap<String, List<Declaration>>();
-		parent = null;
+	protected Environment() {		
+		this(null);	
 	}
 	
 	public static Environment getBuiltins() {
@@ -22,7 +25,8 @@ public class Environment {
 	}
 	
 	public Environment(Environment parent) {
-		mappings = new HashMap<String, List<Declaration>>();
+		fmap = new HashMap<String, POGraph<FunctionDecl>>();
+		vmap = new HashMap<String, VarDecl>();
 		this.parent = parent;
 	}
 	

@@ -1,10 +1,8 @@
 package org.lqc.jxc.types;
 
-public abstract class Type {	
+import org.lqc.util.PartialyComparable;
+
+public abstract class Type implements PartialyComparable<Type> {	
 	public static Type ANY = new AnyType();
-	public static Type VOID = new VoidType();
-	
-	public boolean isSupertypeOf(Type t) {
-		return false;		
-	}
+	public static Type VOID = new VoidType();	
 }

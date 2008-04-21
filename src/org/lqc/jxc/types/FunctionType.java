@@ -38,29 +38,7 @@ public class FunctionType extends Type {
 		bf.append("]");
 
 		return bf.toString();
-	}
-
-	@Override
-	public boolean isSupertypeOf(Type t) {
-		if(t instanceof FunctionType) {
-			FunctionType ft = (FunctionType)t;		
-			boolean result = this.returnType.isSupertypeOf(ft.getReturnType());
-			
-			Iterator<Type> myIter = this.argsType.iterator();
-			Iterator<Type> ftIter = ft.getArgumentTypes().iterator();
-			
-			while( myIter.hasNext() && ftIter.hasNext() && result) {
-				Type a = myIter.next();
-				Type b = ftIter.next();
-			
-				result = result && b.isSupertypeOf(a);
-			}
-			
-			return result;
-		}
-		
-		return super.isSupertypeOf(t);		
-	}
+	}	
 	
 	public Type getReturnType() {
 		return this.returnType;
@@ -68,5 +46,71 @@ public class FunctionType extends Type {
 	
 	public List<Type> getArgumentTypes() {
 		return this.argsType;
+	}
+	
+	public int getArity() {
+		return this.argsType.size();
+	}
+
+	/** Function type is comparable with other function types and "any". */ 
+	public boolean isComparable(Type x) 
+	{
+		if (x instanceof AnyType) return true;
+		
+		if (x instanceof FunctionType) {
+			FunctionType f = (FunctionType)x;
+			
+			/* If return types are not comparable, then f !~ g */
+			if (!this.returnType.isComparable(f.returnType)) 
+				return false;
+			
+			if (this.getArity() != f.getArity())
+				return false;
+			
+			Iterator<Type> gi = this.argsType.iterator();
+			Iterator<Type> fi = f.argsType.iterator();
+			
+			/* ( E(k) g.arg[k] !~ f.arg[k] ) => g !~ f */
+			while(gi.hasNext()) {
+				Type gt = gi.next();
+				Type ft = fi.next();
+				
+				if(! gt.isComparable(ft) ) 
+					return false;
+			}
+			
+			return true;		
+		}	
+		
+		return false;
+	}
+
+	public boolean isGreaterEqual(Type x) {
+		/* any is greater then any function type */
+		if(x instanceof AnyType) return false;
+		
+		FunctionType f = (FunctionType)x;
+		
+		/* let this = g;
+		 * (g.rt >= f.rt and FA(k) f.arg[k] >= g.arg[k])
+		 *  	=> f ~ g	 	
+		 */
+		
+		/* if g.rt > f.rt => f < g */ 
+		if(! this.returnType.isGreaterEqual(f.returnType) )
+			return false;
+		
+		Iterator<Type> gi = this.argsType.iterator();
+		Iterator<Type> fi = f.argsType.iterator();
+		
+		/* ( E(k) g.arg[k] < f.arg[k] ) => g < f */
+		while(gi.hasNext()) {
+			Type gt = gi.next();
+			Type ft = fi.next();
+			
+			if(! gt.isGreaterEqual(ft) ) return false;
+		}
+		
+		return true;		
 	}
 }

@@ -52,10 +52,6 @@ public class ScopeWalker implements TreeVisitor {
 	public void visit(VarDecl decl) {
 		/* declarations are not recursive */
 		decl.getInitialValue().visitNode(this);
-		if( envStack.peek().hasImmediateMapping(decl) )
-			// TODO
-		
-
 	}
 
 	public void visit(FunctionCall call) {
