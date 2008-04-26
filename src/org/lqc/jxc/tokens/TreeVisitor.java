@@ -3,7 +3,7 @@ package org.lqc.jxc.tokens;
 public interface TreeVisitor {	
 	public void visit(Program prog);
 		
-	public void visit(Declaration decl);
+	public void visit(ArgumentDecl decl);
 	public void visit(FunctionDecl decl);	
 	public void visit(VarDecl decl);		
 	

@@ -6,7 +6,6 @@ import org.lqc.jxc.tokens.AssignmentInstr;
 import org.lqc.jxc.tokens.ComplexInstr;
 import org.lqc.jxc.tokens.CondInstr;
 import org.lqc.jxc.tokens.ConstantExpr;
-import org.lqc.jxc.tokens.Declaration;
 import org.lqc.jxc.tokens.EmptyInstruction;
 import org.lqc.jxc.tokens.FunctionCall;
 import org.lqc.jxc.tokens.FunctionDecl;
@@ -17,31 +16,38 @@ import org.lqc.jxc.tokens.ReturnInstr;
 import org.lqc.jxc.tokens.TreeVisitor;
 import org.lqc.jxc.tokens.VarDecl;
 import org.lqc.jxc.tokens.VarExpr;
+import org.lqc.util.NonUniqueElementException;
 
 public class ScopeWalker implements TreeVisitor {
 	
-	private Stack<Environment> envStack;
+	private Stack<Context> envStack;
 	
 	public ScopeWalker() {
-		envStack = new Stack<Environment>();
-		envStack.push(Environment.getBuiltins());
+		envStack = new Stack<Context>();
+		envStack.push(Context.getBuiltins());
 	}
 
-	public void visit(Program prog) {
-		Environment top = new Environment(envStack.peek());
+	public void visit(Program prog) {		
+		Context top = new Context(envStack.peek());
 		
-		for(FunctionDecl f : prog.getFunctions()) {
-			top.putMapping(f);			
+		try {
+			for(FunctionDecl f : prog.getFunctions()) {
+				top.put(f);			
+			}
+			
+			envStack.push(top);
+			
+			for(FunctionDecl f : prog.getFunctions()) {
+				f.visitNode(this);			
+			}
 		}
-		
-		envStack.push(top);
-		
-		for(FunctionDecl f : prog.getFunctions()) {
-			f.visitNode(this);			
-		}
+		catch(NonUniqueElementException e) {
+			e.printStackTrace();
+			System.exit(0);						
+		}		
 	}
 
-	public void visit(Declaration decl) {
+	public void visit(ArgumentDecl decl) 
 		// This isn't good XD //
 	}
 

@@ -1,7 +1,6 @@
 package org.lqc.jxc.tests;
 
-import static org.lqc.jxc.types.PrimitiveType.INT;
-import static org.lqc.jxc.types.Type.ANY;
+import static org.lqc.jxc.types.PrimitiveType.*;
 
 import java.awt.Canvas;
 import java.awt.Color;
@@ -17,39 +16,37 @@ import java.util.List;
 import java.util.Vector;
 
 import org.lqc.jxc.types.FunctionType;
-import org.lqc.jxc.types.PrimitiveType;
-import org.lqc.jxc.types.Type;
+import org.lqc.util.DAGraph;
 import org.lqc.util.NonUniqueElementException;
-import org.lqc.util.POGraph;
-import org.lqc.util.PartialyComparable;
+import org.lqc.util.PartiallyOrdered;
 
-public class GraphDrawer<T extends PartialyComparable<T>> extends Canvas 
+public class GraphDrawer<K extends PartiallyOrdered<K>, V> extends Canvas 
 {
-	private POGraph<T> _model;
-	private HashMap<POGraph<T>.GraphNode, Point> _pos;
-	private Vector<Vector<POGraph<T>.GraphNode>> _layers;
+	private DAGraph<K,V> _model;
+	private HashMap<DAGraph<K,V>.Node, Point> _pos;
+	private Vector<Vector<DAGraph<K,V>.Node>> _layers;
 		
-	public GraphDrawer(POGraph model) {
+	public GraphDrawer(DAGraph<K,V> model) {
 		/* Constructor */	
 		_model = model;
-		_pos = new HashMap<POGraph<T>.GraphNode, Point>();		
-		_layers = new Vector<Vector<POGraph<T>.GraphNode>>();
+		_pos = new HashMap<DAGraph<K,V>.Node, Point>();		
+		_layers = new Vector<Vector<DAGraph<K,V>.Node>>();
 		
-		Vector<POGraph<T>.GraphNode> la = new Vector<POGraph<T>.GraphNode>();
+		Vector<DAGraph<K,V>.Node> la = new Vector<DAGraph<K,V>.Node>();
 		
-		HashSet<POGraph<T>.GraphNode> nodes = 
-			new HashSet<POGraph<T>.GraphNode>();
+		HashSet<DAGraph<K,V>.Node> nodes = 
+			new HashSet<DAGraph<K,V>.Node>();
 		
-		nodes.add(_model.root());		
-		la.add(_model.root());
+		nodes.add(_model.getRoot());		
+		la.add(_model.getRoot());
 		_layers.add(la);		
 		
 		
 		while(! la.isEmpty() ) {
-			Vector<POGraph<T>.GraphNode> lb = new Vector<POGraph<T>.GraphNode>();
+			Vector<DAGraph<K,V>.Node> lb = new Vector<DAGraph<K,V>.Node>();
 						
-			for(POGraph<T>.GraphNode n : la) {
-				for(POGraph<T>.GraphNode c : n.children())
+			for(DAGraph<K,V>.Node n : la) {
+				for(DAGraph<K,V>.Node c : n.children())
 				{
 					if(!nodes.contains(c)) {
 						lb.add(c);
@@ -73,36 +70,37 @@ public class GraphDrawer<T extends PartialyComparable<T>> extends Canvas
 	}
 	
 	@Override
-	public void paint(Graphics g) {		
-		g.setColor(Color.white);
-		
-		final int width = getWidth();
-		final int height = getHeight();
-		
-		g.clearRect(0, 0, width, height);
-		
+	public void paint(Graphics g) {
+		int width = getWidth();
+		int height = getHeight();
+				
+		g.setColor(Color.black);		
+		g.fillRect(0, 0, width, height);
+						
 		final int ystep = height / _layers.size();		
 		
 		int yoffset = 0;
-		for(List<POGraph<T>.GraphNode> l : _layers) {
+		for(List<DAGraph<K,V>.Node> l : _layers) {
 			if(l.size() == 0) break;
 			final int xstep = width / l.size();
 			int xoffset = 0;
-			for(POGraph<T>.GraphNode n : l) {
+			for(DAGraph<K,V>.Node n : l) {
 				paintNode(g, n, xoffset, yoffset, xstep, ystep);
 				xoffset += xstep;
 			}
 			yoffset += ystep;
 		}
-		
-		paintArrows(g, _model.root());		
+	
+		g.setColor(Color.cyan);
+		paintArrows(g, _model.getRoot());
+		_pos.clear();
 	}
 	
-	public void paintNode(Graphics g, POGraph<T>.GraphNode n, 
+	public void paintNode(Graphics g, DAGraph<K,V>.Node n, 
 			int x, int y, int w, int h)
 	{
 		if(!_pos.containsKey(n)) {
-			g.setColor(Color.black);
+			g.setColor(Color.white);			
 			g.drawRect(x+(int)(w*0.1), y+(int)(h*0.1), (int)(w*0.8), (int)(h*0.8));		
 			if(n.value() != null)
 				g.drawString(n.value().toString(), x+(int)(w*0.2), y+(int)(h*0.2));
@@ -112,22 +110,20 @@ public class GraphDrawer<T extends PartialyComparable<T>> extends Canvas
 	}
 	
 	 
-	void paintArrows(Graphics g, POGraph<T>.GraphNode n) {
+	void paintArrows(Graphics g, DAGraph<K,V>.Node n) {
 		Point p = _pos.get(n);				
 		
-		for(POGraph<T>.GraphNode c : n.children()) {
-			Point q = _pos.get(c);
-			
+		for(DAGraph<K,V>.Node c : n.children()) {
+			Point q = _pos.get(c);			
 			g.drawLine(p.x, p.y, q.x, q.y);
 			paintArrows(g, c);			
 		}
-	}
-		
+	}		
 
 	/**
 	 * @param args
 	 */
-	public static void draw(POGraph g) {
+	public static void draw(DAGraph g) {
 		
 		Frame f = new Frame("Graph drawer");
 		f.addWindowListener( new WindowAdapter() {
@@ -146,15 +142,17 @@ public class GraphDrawer<T extends PartialyComparable<T>> extends Canvas
 	public static void main(String[] args) 
 		throws NonUniqueElementException 
 	{
-		POGraph<Type> g = new POGraph<Type>();		
+		DAGraph<FunctionType, FunctionType> g = 
+			new DAGraph<FunctionType, FunctionType>();		
 		
-		g.insert( new FunctionType(ANY, ANY) );		
-		//g.insert( new FunctionType(INT, ANY) );
-		g.insert( new FunctionType(INT, INT, INT) );
-		g.insert( new FunctionType(INT, ANY, ANY) );		
-		g.insert( new FunctionType(INT, ANY, INT) );
-		g.insert( new FunctionType(INT, INT, ANY) );		
-		// g.insert( new FunctionType(ANY, INT, INT) );
+		FunctionType f;
+		
+		g.insert( f = new FunctionType(ANY, ANY), f );		
+		g.insert( f = new FunctionType(INT, INT, INT), f );
+		g.insert( f = new FunctionType(INT, ANY, ANY), f );		
+		g.insert( f = new FunctionType(INT, ANY, INT), f );
+		g.insert( f = new FunctionType(INT, INT, ANY), f );		
+		
 
 		GraphDrawer.draw(g);		
 	}

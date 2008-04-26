@@ -1,5 +1,7 @@
 package org.lqc.jxc.types;
 
+import org.lqc.util.Relation;
+
 public class PrimitiveType extends Type {
 	
 	public static PrimitiveType INT = new PrimitiveType("int");
@@ -37,6 +39,10 @@ public class PrimitiveType extends Type {
 
 	public boolean isGreaterEqual(Type x) {		
 		return x.equals(this);
+	}
+
+	public Relation compareTo(Type object) {
+		return Relation.NONCOMPARABLE;		
 	}
 	
 	

@@ -4,12 +4,9 @@ import java.util.List;
 import java.util.Vector;
 
 import org.lqc.jxc.types.Type;
-import org.lqc.util.PartialyComparable;
 
-public class FunctionDecl extends Declaration
-	implements PartialyComparable<FunctionDecl>
-{
-	
+public class FunctionDecl extends Declaration	
+{	
 	protected ComplexInstr body;
 	protected List<String> argIDs;
 
@@ -37,13 +34,4 @@ public class FunctionDecl extends Declaration
 	public void visitNode(TreeVisitor v) {
 		v.visit(this);		
 	}
-
-	public boolean isComparable(FunctionDecl x) {
-		return this.entityType.isComparable(x.getType());		
-	}
-
-	public boolean isGreaterEqual(FunctionDecl x) {
-		return this.entityType.isGreaterEqual(x.getType());
-	}
-
 }

@@ -1,5 +1,7 @@
 package org.lqc.jxc.types;
 
+import org.lqc.util.Relation;
+
 class VoidType extends Type {
 	
 	@Override
@@ -7,12 +9,8 @@ class VoidType extends Type {
 		return "<void>";
 	}
 
-	/** Void type is not comparable with other types. */
-	public boolean isComparable(Type x) {		
-		return false;
+	public Relation compareTo(Type object) {
+		return Relation.NONCOMPARABLE;
 	}
-
-	public boolean isGreaterEqual(Type x) {		
-		return (x instanceof VoidType);	}
 
 }

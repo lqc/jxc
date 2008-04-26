@@ -1,5 +1,7 @@
 package org.lqc.jxc.types;
 
+import org.lqc.util.Relation;
+
 class AnyType extends Type {
 	
 	@Override
@@ -7,17 +9,8 @@ class AnyType extends Type {
 		return "<any>";
 	}
 
-	/* Any is comparabale with eveything except void type. */
-	public boolean isComparable(Type x) {		
-		return !(x instanceof VoidType);
+	public Relation compareTo(Type object) {
+		return Relation.NONCOMPARABLE;
 	}
-
-	public boolean isGreaterEqual(Type x) {
-		/* Any is greater then anything */
-		return true;
-	}
-	
-	
-	
 
 }

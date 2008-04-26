@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.lqc.util.Relation;
+
 public class FunctionType extends Type {
 
 	public FunctionType(Type t, List<Type> tl) {
@@ -51,8 +53,9 @@ public class FunctionType extends Type {
 	public int getArity() {
 		return this.argsType.size();
 	}
+	
 
-	/** Function type is comparable with other function types and "any". */ 
+	/** Function type is comparable with other function types and "any". *//* 
 	public boolean isComparable(Type x) 
 	{
 		if (x instanceof AnyType) return true;
@@ -60,7 +63,7 @@ public class FunctionType extends Type {
 		if (x instanceof FunctionType) {
 			FunctionType f = (FunctionType)x;
 			
-			/* If return types are not comparable, then f !~ g */
+			 If return types are not comparable, then f !~ g 
 			if (!this.returnType.isComparable(f.returnType)) 
 				return false;
 			
@@ -70,7 +73,7 @@ public class FunctionType extends Type {
 			Iterator<Type> gi = this.argsType.iterator();
 			Iterator<Type> fi = f.argsType.iterator();
 			
-			/* ( E(k) g.arg[k] !~ f.arg[k] ) => g !~ f */
+			 ( E(k) g.arg[k] !~ f.arg[k] ) => g !~ f 
 			while(gi.hasNext()) {
 				Type gt = gi.next();
 				Type ft = fi.next();
@@ -86,24 +89,24 @@ public class FunctionType extends Type {
 	}
 
 	public boolean isGreaterEqual(Type x) {
-		/* any is greater then any function type */
+		 any is greater then any function type 
 		if(x instanceof AnyType) return false;
 		
 		FunctionType f = (FunctionType)x;
 		
-		/* let this = g;
+		 let this = g;
 		 * (g.rt >= f.rt and FA(k) f.arg[k] >= g.arg[k])
 		 *  	=> f ~ g	 	
-		 */
+		 
 		
-		/* if g.rt > f.rt => f < g */ 
+		 if g.rt > f.rt => f < g  
 		if(! this.returnType.isGreaterEqual(f.returnType) )
 			return false;
 		
 		Iterator<Type> gi = this.argsType.iterator();
 		Iterator<Type> fi = f.argsType.iterator();
 		
-		/* ( E(k) g.arg[k] < f.arg[k] ) => g < f */
+		 ( E(k) g.arg[k] < f.arg[k] ) => g < f 
 		while(gi.hasNext()) {
 			Type gt = gi.next();
 			Type ft = fi.next();
@@ -112,5 +115,14 @@ public class FunctionType extends Type {
 		}
 		
 		return true;		
+	}*/
+
+	public Relation compareTo(Type t) {
+		return Relation.NONCOMPARABLE;	
+	}
+	
+	public Relation compareTo(FunctionType t) {
+		return Relation.NONCOMPARABLE;
+		
 	}
 }
