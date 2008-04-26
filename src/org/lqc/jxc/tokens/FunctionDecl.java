@@ -3,16 +3,17 @@ package org.lqc.jxc.tokens;
 import java.util.List;
 import java.util.Vector;
 
-import org.lqc.jxc.types.Type;
+import org.lqc.jxc.types.FunctionType;
 
 public class FunctionDecl extends Declaration	
 {	
 	protected ComplexInstr body;
-	protected List<String> argIDs;
+	protected List<ArgumentDecl> args;
 
-	public FunctionDecl(Type t, String fid, List<String> aids, ComplexInstr b) {
+	public FunctionDecl(FunctionType t, String fid, List<ArgumentDecl> args, ComplexInstr b) {
 		super(t, fid);
-		argIDs = new Vector<String>(aids);
+		this.args = new Vector<ArgumentDecl>();
+		this.args.addAll(args);		
 		body = b;
 	}
 	
@@ -26,12 +27,17 @@ public class FunctionDecl extends Declaration
 	/**
 	 * @return the argIDs
 	 */
-	public List<String> getArgIDs() {
-		return argIDs;
+	public List<ArgumentDecl> getArgs() {
+		return args;
 	}
 
 	@Override
 	public void visitNode(TreeVisitor v) {
 		v.visit(this);		
+	}
+	
+	@Override
+	public FunctionType getType() {
+		return (FunctionType)this.entityType;
 	}
 }

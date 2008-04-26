@@ -37,7 +37,13 @@ public class Context {
 		try {
 			return set.find(t);
 		} catch(ElementNotFoundException e) {
-			return parent.getFunction(id, t);
+			if(parent != null)
+				return parent.getFunction(id, t);
+			throw e;
+		} catch(NullPointerException e) {
+			if(parent != null)
+				return parent.getFunction(id, t);
+			throw new ElementNotFoundException();
 		}
 	}
 	
@@ -45,7 +51,14 @@ public class Context {
 		throws ElementNotFoundException
 	{
 		VarDecl var = vmap.get(id);
-		return (var != null ? var : parent.getVariable(id));		
+		
+		if(var != null)
+				return var;
+				
+		if(parent != null)
+			return parent.getVariable(id);
+		
+		throw new ElementNotFoundException();		
 	}	
 		
 	public void put(FunctionDecl d)
@@ -64,6 +77,9 @@ public class Context {
 	public void put(VarDecl d)
 		throws NonUniqueElementException
 	{
+		if(vmap.containsKey(d.getID()) )
+			throw new NonUniqueElementException();
+			
 		vmap.put(d.getID(), d);
 	}
 

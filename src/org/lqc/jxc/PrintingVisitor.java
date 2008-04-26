@@ -2,6 +2,7 @@ package org.lqc.jxc;
 
 import java.io.PrintStream;
 
+import org.lqc.jxc.tokens.ArgumentDecl;
 import org.lqc.jxc.tokens.AssignmentInstr;
 import org.lqc.jxc.tokens.ComplexInstr;
 import org.lqc.jxc.tokens.CondInstr;
@@ -40,12 +41,12 @@ public class PrintingVisitor implements org.lqc.jxc.tokens.TreeVisitor {
 		this.output.printf("[BODY-END]\n");		
 	}
 	
-	public void visit(Declaration decl) {
+	public void visit(ArgumentDecl decl) {
 		this.output.printf("[DECL] ID: %s TYPE: %s\n", decl.getID(), decl.getType());	
 	}
 	
 	public void visit(VarDecl decl) {
-		this.visit((Declaration)decl);		
+		this.output.printf("[DECL] ID: %s TYPE: %s\n", decl.getID(), decl.getType());
 	}
 	
 	

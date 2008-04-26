@@ -2,7 +2,6 @@ package org.lqc.jxc.tests;
 
 import java.io.File;
 import java.io.FileFilter;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import junit.framework.Test;

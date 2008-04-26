@@ -31,7 +31,8 @@ public class VarExpr extends Expression {
 	/**
 	 * @param ref the ref to set
 	 */
-	public void setRef(VarDecl ref) {
+	public void bindRef(VarDecl ref) {
 		this.ref = ref;
+		this.valueType = ref.getType();
 	}
 }

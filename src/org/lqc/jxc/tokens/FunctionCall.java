@@ -11,7 +11,7 @@ public class FunctionCall extends Expression {
 	private List<Expression> args;
 	private boolean isBuiltin;
 	
-	private FunctionDecl ref;
+	private FunctionDecl ref;	
 	
 	public FunctionCall(String fid, boolean builtin, List<Expression> args) {
 		super(Type.ANY);
@@ -53,5 +53,14 @@ public class FunctionCall extends Expression {
 	public boolean isBuiltin() {
 		return isBuiltin;
 	}
+	
+	public void bindRef(FunctionDecl d) {
+		this.ref = d;
+		this.valueType = d.getType().getReturnType();
+	}
+	
+	public FunctionDecl getRef() {
+		return this.ref;
+	}	
 	
 }

@@ -13,7 +13,7 @@ import junit.framework.TestCase;
 
 import org.lqc.jxc.Lexer;
 import org.lqc.jxc.Parser;
-import org.lqc.jxc.PrintingVisitor;
+import org.lqc.jxc.ScopeWalker;
 import org.lqc.jxc.tokens.Program;
 
 public class ParserTest extends TestCase {
@@ -27,7 +27,7 @@ public class ParserTest extends TestCase {
 		this.positive = positive;		
 	}
 	
-	public void runTest() {		
+	public void runTest() throws Exception {		
 		ByteArrayOutputStream bs;
 		PrintStream log = new PrintStream( bs = new ByteArrayOutputStream());
 		
@@ -41,13 +41,18 @@ public class ParserTest extends TestCase {
 			
 			Symbol root = parser.parse();
 			Program p = (Program)root.value;
-			p.visitNode(new PrintingVisitor(log));					
+			// p.visitNode(new PrintingVisitor(log));
+			p.visitNode(new ScopeWalker());
 			
 		} catch (FileNotFoundException e) {			
 			Assert.fail("Test file: '" + f.getName() + "' is missing.");
 		} catch (Exception e) {
 			if(positive)
-				Assert.fail("Exception: " + e.getLocalizedMessage());			
+				throw e;			
+			
+			log.printf("Exception: " + e.getMessage());			
+			System.out.println(bs.toString());		
+			System.out.printf("*** END OF TEST: %s ***\n", this.getName());
 			return;
 		}
 		
@@ -57,7 +62,7 @@ public class ParserTest extends TestCase {
 			Assert.fail("Malformed input accepted.");
 		}
 		
-		System.out.println(bs.toString());
+		System.out.println(bs.toString());		
 		System.out.printf("*** END OF TEST: %s ***\n", this.getName());
 	}
 	

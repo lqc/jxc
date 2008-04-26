@@ -4,6 +4,7 @@ public class AssignmentInstr extends Instruction {
 	
 	private String id;
 	private Expression value;
+	private VarDecl ref;
 	
 	public AssignmentInstr(String id, Expression e) {
 		this.id = id;
@@ -27,6 +28,20 @@ public class AssignmentInstr extends Instruction {
 	 */
 	public Expression getValue() {
 		return value;
+	}
+
+	/**
+	 * @return the ref
+	 */
+	public VarDecl getRef() {
+		return ref;
+	}
+
+	/**
+	 * @param ref the ref to set
+	 */
+	public void setRef(VarDecl ref) {
+		this.ref = ref;
 	}
 
 }
