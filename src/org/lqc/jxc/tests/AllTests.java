@@ -25,6 +25,7 @@ public class AllTests {
 			
 		};
 		
+		
 		dir  = new File("examples/good");		
 		tests = dir.listFiles(filter);		
 		for(File file : tests) {
@@ -36,9 +37,9 @@ public class AllTests {
 		
 		for(File file : tests) {
 			suite.addTest( new ParserTest("test-"+file.getName(), file, false));
-		}
+		}		
 		
-		dir  = new File("examples/extensions/for");		
+		dir  = new File("examples/extensions/overloading");		
 		tests = dir.listFiles(filter);		
 		for(File file : tests) {
 			suite.addTest( new ParserTest("xtest-"+file.getName(), file, true));

@@ -2,8 +2,6 @@ package org.lqc.jxc.tokens;
 
 import org.lqc.jxc.types.Type;
 
-import java_cup.runtime.Symbol;
-
 public class VarDecl extends Declaration {
 
 	public VarDecl(Type t, String id, Expression init) {
@@ -12,7 +10,12 @@ public class VarDecl extends Declaration {
 	}
 	
 	public VarDecl(Type t, String id) {
-		this(t, id, new NullExpression()); 
+		super(t, id);
+		
+		if(t.equals(Type.VOID)) 
+			initialValue = Expression.VOID;
+		else
+			initialValue = Expression.NULL;
 	}
 
 	protected Expression initialValue;
@@ -28,4 +31,6 @@ public class VarDecl extends Declaration {
 	public Expression getInitialValue() {
 		return initialValue;
 	}
+	
+	
 }

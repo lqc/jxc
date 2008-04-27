@@ -107,15 +107,9 @@ arg_dlist_ne ::= arg_dlist_ne:al COLON arg_decl:arg	{: al.add(arg); RESULT = al;
 arg_decl ::= TYPE:type ID:id {: RESULT = new ArgumentDecl(type, id); :};
 
 /* Function Declaration */
-func_decl ::= TYPE:rt ID:fid LPAR arg_dlist:args RPAR complex_instr:ci {:
-				List<Type> type_list = new Vector<Type>();				
-				for(ArgumentDecl d : args) {
-				       type_list.add(d.getType());				       
-				}
-				FunctionType ft = new FunctionType(rt, type_list);				
-				RESULT = new FunctionDecl(ft, fid, args, ci);
-			:}
-;
+func_decl ::= TYPE:rt ID:fid LPAR arg_dlist:args RPAR complex_instr:ci {:							
+				RESULT = new FunctionDecl(fid, rt, args, ci);
+:};
 
 /*** INSTRUCTIONS ***/
 
@@ -163,7 +157,7 @@ loop_instr ::= WHILE LPAR expr:e RPAR instr:i {:
 			  	RESULT = new LoopInstr(e, body, init, post); :}
 ;
 
-return_instr ::= RETURN SEMI {: RESULT = new ReturnInstr(Expression.NULL); :} |
+return_instr ::= RETURN SEMI {: RESULT = new ReturnInstr(Expression.VOID); :} |
 				 RETURN expr:e SEMI {: RESULT = new ReturnInstr(e); :}
 ;
 

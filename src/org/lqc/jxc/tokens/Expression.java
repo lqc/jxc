@@ -5,6 +5,7 @@ import org.lqc.jxc.types.Type;
 public abstract class Expression extends Instruction {
 	
 	public static Expression NULL = new NullExpression();
+	public static Expression VOID = new VoidExpression();
 	
 	protected Type valueType;
 		

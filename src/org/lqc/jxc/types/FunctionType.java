@@ -1,39 +1,39 @@
 package org.lqc.jxc.types;
 
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 
 import org.lqc.util.Relation;
+import org.lqc.util.Tuple;
 
 public class FunctionType extends Type {
-
-	public FunctionType(Type t, List<Type> tl) {
-		this.returnType = t;
-		this.argsType = tl;
-	}
+	
+/*	public FunctionType(Type rt, Collection<Type> types) {		
+		this.returnType = rt;
+		this.argsType = new Tuple<Type>(types);				
+	} */
 	
 	public FunctionType(Type rt, Type... types) {		
 		this.returnType = rt;
-		this.argsType = new ArrayList<Type>(types.length);
-		for(Type t : types) this.argsType.add(t);		
+		this.argsType = new Tuple<Type>(types);				
 	}
 
 	private Type returnType;
-	private List<Type> argsType;
+	private Tuple<Type> argsType;
 
 	@Override
 	public String toString() {
 		StringBuffer bf = new StringBuffer("[func:");
 		if (argsType != null) {
-			if (argsType.size() == 1) {
-				bf.append(argsType.get(0).toString());
-			} else if (argsType.size() > 1) {
-				for (Type t : argsType) {
-					bf.append(t.toString());
+			Iterator<Type> i = argsType.iterator();
+			if(i.hasNext()) {	
+				Type t = i.next();
+				bf.append(argsType.get(0).toString());				
+				while(i.hasNext()) {
+					t = i.next();
 					bf.append(", ");
+					bf.append(t.toString());					
 				}
-			}
+			}			
 		}
 		bf.append(" => ");
 		bf.append(returnType.toString());
@@ -46,7 +46,7 @@ public class FunctionType extends Type {
 		return this.returnType;
 	}
 	
-	public List<Type> getArgumentTypes() {
+	public Tuple<Type> getArgumentTypes() {
 		return this.argsType;
 	}
 	
@@ -118,11 +118,25 @@ public class FunctionType extends Type {
 	}*/
 
 	public Relation compareTo(Type t) {
+		//if(t instanceof FunctionType) 
+		//	return this.compareTo((FunctionType)t);
+		
 		return Relation.NONCOMPARABLE;	
 	}
 	
 	public Relation compareTo(FunctionType t) {
-		return Relation.NONCOMPARABLE;
+		Relation ar = this.argsType.compareTo(t.argsType);
+		Relation rr = this.returnType.compareTo(t.returnType);
+				
+		if(ar.equal() && rr.equal()) 
+			return Relation.EQUAL;
 		
+		if(ar.greaterOrEqual() && rr.lesserOrEqual()) 
+			return Relation.GREATER;
+				
+		if(ar.lesserOrEqual() && rr.greaterOrEqual())
+			return Relation.LESSER;
+		
+		return Relation.NONCOMPARABLE;		
 	}
 }

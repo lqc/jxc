@@ -50,16 +50,27 @@ public class DAGraph<K extends PartiallyOrdered<? super K> , V> implements POSet
 		return (this.find(root, key) != null);
 	}
 
-	public V find(K key) throws ElementNotFoundException {
-		Node x = this.find(root, key);
+	public V find(K key) 
+		throws ElementNotFoundException 
+	{
+		Node ret = null;
 		
-		if(x == null)
+		for(Node n : root.children) {
+			Node x = this.find(n, key);
+			if(x != null) {
+				ret = x;
+				break;
+			}
+		}
+				
+		if(ret == null)
 			throw new ElementNotFoundException();
 		
-		return x.value;		
+		return ret.value;		
 	}
 	
-	private Node find(Node root, K key) {
+	private Node find(Node root, K key) 
+	{		
 		switch(key.compareTo(root.key)) {			
 			case EQUAL:
 				return root;
@@ -74,12 +85,16 @@ public class DAGraph<K extends PartiallyOrdered<? super K> , V> implements POSet
 		}		
 	}
 
-	public void insert(K key, V value) throws NonUniqueElementException {
+	public void insert(K key, V value) 
+		throws NonUniqueElementException 
+	{
 		Node node = new Node(key, value);
 		this.insert(root, node);
 	}
 
-	private void insert(Node root, Node node) throws NonUniqueElementException {
+	private void insert(Node root, Node node) 
+		throws NonUniqueElementException 
+	{
 
 		/*
 		 * STUDY. let x < n 1. x !~ child(n) => child(n) = child(n) + {x}
@@ -132,5 +147,13 @@ public class DAGraph<K extends PartiallyOrdered<? super K> , V> implements POSet
 	
 	public Node getRoot() {
 		return root;
+	}
+	
+	public String toString() {
+		StringBuffer buf = new StringBuffer();
+		/* TODO display all elements */
+		buf.append("<DAG>");
+		
+		return buf.toString();
 	}
 }

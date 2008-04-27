@@ -10,7 +10,7 @@ class VoidType extends Type {
 	}
 
 	public Relation compareTo(Type object) {
-		return Relation.NONCOMPARABLE;
+		return (this.equals(object) ? Relation.EQUAL : Relation.NONCOMPARABLE);
 	}
 
 }

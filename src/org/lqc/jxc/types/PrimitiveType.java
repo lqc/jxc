@@ -33,16 +33,14 @@ public class PrimitiveType extends Type {
 		return "p:"+ name;
 	}
 
-	public boolean isComparable(Type x) {
-		return x.equals(ANY) || x.equals(this);		
-	}
-
-	public boolean isGreaterEqual(Type x) {		
-		return x.equals(this);
-	}
-
 	public Relation compareTo(Type object) {
-		return Relation.NONCOMPARABLE;		
+		if(object instanceof AnyType)
+			return object.compareTo(this);
+		
+		//if(! (object instanceof PrimitiveType))
+		//	return Relation.NONCOMPARABLE;		
+		
+		return (this.equals(object) ? Relation.EQUAL : Relation.NONCOMPARABLE);
 	}
 	
 	

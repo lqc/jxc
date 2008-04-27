@@ -1,6 +1,6 @@
 package org.lqc.jxc.tokens;
 
-import org.lqc.jxc.Context;
+import org.lqc.jxc.transform.Context;
 
 public abstract class SyntaxTreeNode {
 	

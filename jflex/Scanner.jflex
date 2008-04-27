@@ -94,6 +94,7 @@ Id = {Letter}({AlphaNum}|_)*
 "int" { return newSymbol(yytext(), sym.TYPE, PrimitiveType.INT); }
 "double" { return newSymbol(yytext(), sym.TYPE, PrimitiveType.REAL); }
 "boolean" { return newSymbol(yytext(), sym.TYPE, PrimitiveType.BOOLEAN); }
+"string" { return newSymbol(yytext(), sym.TYPE, PrimitiveType.STRING); }
 "void" { return newSymbol(yytext(), sym.TYPE, Type.VOID); }
 
 "true" { return newSymbol("Boolean", sym.BOOLEAN, new Boolean(true)); }

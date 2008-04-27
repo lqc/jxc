@@ -23,5 +23,8 @@ public abstract class Declaration extends Instruction {
 	public String getID() {
 		return entityID;
 	}
-
+	
+	public String toString() {
+		return this.entityID + ": " + this.entityType;
+	}
 }

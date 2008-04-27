@@ -1,9 +1,9 @@
-package org.lqc.jxc;
+package org.lqc.jxc.transform;
 
-import java.util.List;
 import java.util.Stack;
-import java.util.Vector;
 
+import org.lqc.jxc.CompilerException;
+import org.lqc.jxc.TypeCheckException;
 import org.lqc.jxc.tokens.ArgumentDecl;
 import org.lqc.jxc.tokens.AssignmentInstr;
 import org.lqc.jxc.tokens.ComplexInstr;
@@ -28,6 +28,16 @@ import org.lqc.util.ElementNotFoundException;
 import org.lqc.util.NonUniqueElementException;
 import org.lqc.util.Relation;
 
+/**
+ * 
+ * Class is responsible for static context analysis. This includes:
+ * 
+ * <ul>
+ * <li>Checking scope for variable/method visibility</li>
+ * <li>Type checking</li>
+ * </ul>
+ *
+ */
 public class ScopeWalker implements TreeVisitor {
 	
 	private Stack<Context> envStack;	
@@ -43,12 +53,14 @@ public class ScopeWalker implements TreeVisitor {
 	}
 	
 	public ScopeWalker() {
-		envStack = new Stack<Context>();
-		push(Context.getBuiltins());
+		envStack = new Stack<Context>();		
 	}
 
-	public void visit(Program prog) {		
-		Context ctx = new Context(current);
+	public void visit(Program prog) {
+		push(Context.getBuiltins());
+		prog.bindStaticContext(current);
+		
+		Context ctx = new Context(current, "<global>");
 		
 		try {
 			for(FunctionDecl f : prog.getFunctions()) {
@@ -76,7 +88,14 @@ public class ScopeWalker implements TreeVisitor {
 	}
 
 	public void visit(FunctionDecl decl) {
-		push(new Context(decl.getStaticContext()) );	
+		push(new Context(decl.getStaticContext(), 
+				decl.getID() + ":" + decl.getType()) );	
+		
+		try {
+			current.put(new VarDecl(decl.getType().getReturnType(), "<return>") );
+		} catch (NonUniqueElementException e) {
+			throw new CompilerException("[INTERNAL] Return value reference already in scope. Impossible ?", e);			
+		}
 		
 		/* process arguments */
 		for(ArgumentDecl d : decl.getArgs()) {
@@ -89,19 +108,22 @@ public class ScopeWalker implements TreeVisitor {
 		for(Instruction i : decl.getBody().getInstructions()) {
 			i.bindStaticContext(current);
 			i.visitNode(this);
+			
 			if(i instanceof Expression) {
 				Expression e = (Expression)i;
 				/* check if expression returns void */
-				if(Type.VOID.compareTo(e.getType()).
+				if(!e.getType().compareTo(Type.VOID).
 						equals(Relation.EQUAL) ) 
 				{
 					throw new TypeCheckException(
 							"Instruction must be 'void' type");
 				}
-			}
-				 
-		}		
+			}				 
+		}	
 		
+		/* TODO check return value: without liveness analysis, 
+		 * we can't be sure there will be a return statement */
+				
 		pop();
 	}
 
@@ -130,12 +152,13 @@ public class ScopeWalker implements TreeVisitor {
 	}
 
 	public void visit(FunctionCall call) {
-		List<Type> types = new Vector<Type>();
+		Type[] types = new Type[call.getArgs().size()];
+		int i=0;
 		
 		for(Expression e : call.getArgs()) {
 			e.bindStaticContext(current);
 			e.visitNode(this);
-			types.add(e.getType());
+			types[i++] = e.getType();
 		}
 		
 		FunctionType alpha = new FunctionType(Type.ANY, types);
@@ -166,7 +189,7 @@ public class ScopeWalker implements TreeVisitor {
 	}
 
 	public void visit(ComplexInstr instr) {
-		push(new Context(current));
+		push(new Context(current, "block"));
 		
 		for(Instruction i : instr.getInstructions()) 
 		{
@@ -193,7 +216,7 @@ public class ScopeWalker implements TreeVisitor {
 				default:
 					throw new TypeCheckException(
 							String.format("Cannot assign expression of type '%s' to" +
-							"variable '%s' of type '%s'.",
+							" variable '%s' of type '%s'.",
 							e.getType().toString(),
 							instr.getId(),
 							d.getType().toString())							
@@ -227,7 +250,20 @@ public class ScopeWalker implements TreeVisitor {
 	}
 
 	public void visit(ReturnInstr ret) {
-		// TODO - compare return expr type with current block type
+		try {
+			VarDecl d = current.getVariable("<return>");			
+			switch(d.getType().compareTo(ret.getValue().getType())) 
+			{
+				case GREATER:
+				case EQUAL:
+					/* ok */
+					break;
+				default:
+					throw new CompilerException("Non-compatible return expression.");
+			}
+		} catch (ElementNotFoundException e) {
+			throw new CompilerException("Returning from non-existant function/method.", e);
+		}		
 	}
 
 	public void visit(CondInstr cond) {

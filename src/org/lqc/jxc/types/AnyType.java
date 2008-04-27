@@ -10,7 +10,8 @@ class AnyType extends Type {
 	}
 
 	public Relation compareTo(Type object) {
-		return Relation.NONCOMPARABLE;
+		return (object.equals(VOID) ? Relation.NONCOMPARABLE : 
+				Relation.EQUAL);
 	}
 
 }

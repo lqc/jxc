@@ -13,8 +13,8 @@ import junit.framework.TestCase;
 
 import org.lqc.jxc.Lexer;
 import org.lqc.jxc.Parser;
-import org.lqc.jxc.ScopeWalker;
 import org.lqc.jxc.tokens.Program;
+import org.lqc.jxc.transform.ScopeWalker;
 
 public class ParserTest extends TestCase {
 	
@@ -43,6 +43,8 @@ public class ParserTest extends TestCase {
 			Program p = (Program)root.value;
 			// p.visitNode(new PrintingVisitor(log));
 			p.visitNode(new ScopeWalker());
+			
+			p = p;
 			
 		} catch (FileNotFoundException e) {			
 			Assert.fail("Test file: '" + f.getName() + "' is missing.");

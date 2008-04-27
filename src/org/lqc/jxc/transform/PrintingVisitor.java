@@ -1,4 +1,4 @@
-package org.lqc.jxc;
+package org.lqc.jxc.transform;
 
 import java.io.PrintStream;
 
