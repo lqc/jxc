@@ -3,9 +3,12 @@ package org.lqc.jxc.tokens;
 import java.util.List;
 import java.util.Vector;
 
+import org.lqc.jxc.Lexem;
+
 public class Program extends SyntaxTreeNode {
 	
-	public Program(String name, List<FunctionDecl> fl) {
+	public Program(int l, int c, String name, List<FunctionDecl> fl) {
+		super(l, c);
 		functions = new Vector<FunctionDecl>(fl);
 	}
 	

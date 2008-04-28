@@ -1,5 +1,6 @@
 package org.lqc.jxc.tokens;
 
+import org.lqc.jxc.Lexem;
 import org.lqc.jxc.types.Type;
 
 public abstract class Expression extends Instruction {
@@ -9,7 +10,8 @@ public abstract class Expression extends Instruction {
 	
 	protected Type valueType;
 		
-	protected Expression(Type t) {
+	protected Expression(int l, int c, Type t) {
+		super(l, c);
 		valueType = t;		
 	}
 	

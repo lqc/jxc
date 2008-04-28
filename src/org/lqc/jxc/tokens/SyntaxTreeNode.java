@@ -5,9 +5,15 @@ import org.lqc.jxc.transform.Context;
 public abstract class SyntaxTreeNode {
 	
 	protected Context staticContext;
+	
+	/* Position of this node. */
+	protected int line;
+	protected int column;
 
-	protected SyntaxTreeNode() {
-		this.staticContext = null;		
+	protected SyntaxTreeNode(int line, int column) {
+		this.staticContext = null;	
+		this.line = line;
+		this.column = column;
 	}
 	
 	public abstract void visitNode(TreeVisitor v);
@@ -18,5 +24,19 @@ public abstract class SyntaxTreeNode {
 
 	public void bindStaticContext(Context ctx) {
 		this.staticContext = ctx;
+	}
+
+	/**
+	 * @return the line
+	 */
+	public int getLine() {
+		return line;
+	}
+
+	/**
+	 * @return the column
+	 */
+	public int getColumn() {
+		return column;
 	}
 }

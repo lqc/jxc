@@ -3,6 +3,7 @@ package org.lqc.jxc.tokens;
 import java.util.List;
 import java.util.Vector;
 
+import org.lqc.jxc.Lexem;
 import org.lqc.jxc.types.Type;
 
 public class FunctionCall extends Expression {
@@ -13,8 +14,8 @@ public class FunctionCall extends Expression {
 	
 	private FunctionDecl ref;	
 	
-	public FunctionCall(String fid, boolean builtin, List<Expression> args) {
-		super(Type.ANY);
+	public FunctionCall(int l, int c, String fid, boolean builtin, List<Expression> args) {
+		super(l, c, Type.ANY);
 		
 		this.fid = fid;
 		this.isBuiltin = builtin;
@@ -23,8 +24,8 @@ public class FunctionCall extends Expression {
 		this.ref = null;
 	}
 	
-	public FunctionCall(String fid, boolean builtin, Expression... args) {
-		this(fid, builtin, new Vector<Expression>(args.length));
+	public FunctionCall(int l, int c, String fid, boolean builtin, Expression... args) {
+		this(l, c, fid, builtin, new Vector<Expression>(args.length));
 		for(Expression e : args) { this.args.add(e); }		
 	}
 	

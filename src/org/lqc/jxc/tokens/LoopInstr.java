@@ -1,5 +1,7 @@
 package org.lqc.jxc.tokens;
 
+import org.lqc.jxc.Lexem;
+
 public class LoopInstr extends Instruction {
 	
 	private Expression condition;
@@ -7,7 +9,8 @@ public class LoopInstr extends Instruction {
 	private Instruction initial;
 	private Instruction post;
 	
-	public LoopInstr(Expression e, Instruction b, Instruction i, Instruction p) {
+	public LoopInstr(int l, int c, Expression e, Instruction b, Instruction i, Instruction p) {
+		super(l, c);
 		this.condition = e;
 		this.initial = i;
 		this.post = p;

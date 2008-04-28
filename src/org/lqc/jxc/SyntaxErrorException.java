@@ -1,13 +1,27 @@
 package org.lqc.jxc;
 
-public class SyntaxErrorException extends CompilerException {
+import org.lqc.jxc.tokens.SyntaxTreeNode;
 
-	public SyntaxErrorException() {
+public class SyntaxErrorException extends CompilerException {
+	
+	public int line;
+	public int column;
+
+	public SyntaxErrorException(SyntaxTreeNode n) {
 		super();		
+		this.line = n.getLine();
+		this.column = n.getColumn();
 	}
 
-	public SyntaxErrorException(String msg) {
+	public SyntaxErrorException(SyntaxTreeNode n, String msg) {
 		super(msg);
+		this.line = n.getLine();
+		this.column = n.getColumn();
+	}
+	
+	public String getMessage() {
+		return String.format("[Error] At line %d: %s",
+				line+1, super.getMessage() );
 	}
 
 }

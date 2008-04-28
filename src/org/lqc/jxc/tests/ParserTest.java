@@ -14,7 +14,7 @@ import junit.framework.TestCase;
 import org.lqc.jxc.Lexer;
 import org.lqc.jxc.Parser;
 import org.lqc.jxc.tokens.Program;
-import org.lqc.jxc.transform.ScopeWalker;
+import org.lqc.jxc.transform.ScopeAnalyzer;
 
 public class ParserTest extends TestCase {
 	
@@ -42,7 +42,7 @@ public class ParserTest extends TestCase {
 			Symbol root = parser.parse();
 			Program p = (Program)root.value;
 			// p.visitNode(new PrintingVisitor(log));
-			p.visitNode(new ScopeWalker());
+			p.visitNode(new ScopeAnalyzer());
 			
 			p = p;
 			

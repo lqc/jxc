@@ -1,5 +1,6 @@
 package org.lqc.jxc.tokens;
 
+import org.lqc.jxc.Lexem;
 import org.lqc.jxc.types.Type;
 
 public class VarExpr extends Expression {	
@@ -7,8 +8,8 @@ public class VarExpr extends Expression {
 	private String id;
 	private VarDecl ref;	
 	
-	public VarExpr(String id) {
-		super(Type.ANY);
+	public VarExpr(int l, int c, String id) {
+		super(l, c, Type.ANY);
 		this.id = id;	
 		this.ref = null;
 	}

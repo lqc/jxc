@@ -1,6 +1,8 @@
 package org.lqc.util;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Vector;
 
 public class DAGraph<K extends PartiallyOrdered<? super K> , V> implements POSet<K, V> {
@@ -155,5 +157,22 @@ public class DAGraph<K extends PartiallyOrdered<? super K> , V> implements POSet
 		buf.append("<DAG>");
 		
 		return buf.toString();
+	}
+	
+	private void putAllChildren(Node x, Set<V> set) {
+		for(Node n : x.children) {
+			set.add(n.value);
+			putAllChildren(n, set);
+		}
+	}
+
+	public Set<V> values() {
+		HashSet<V> set = new HashSet<V>();
+		for(Node n : root.children) {
+			set.add(n.value);
+			putAllChildren(n, set);
+		}
+		
+		return set;
 	}
 }

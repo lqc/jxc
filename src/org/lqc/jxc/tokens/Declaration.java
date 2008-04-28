@@ -1,10 +1,12 @@
 package org.lqc.jxc.tokens;
 
+import org.lqc.jxc.Lexem;
 import org.lqc.jxc.types.Type;
 
 public abstract class Declaration extends Instruction {
 	
-	public Declaration(Type t, String id) {
+	public Declaration(int l, int c, Type t, String id) {
+		super(l, c);
 		this.entityID = id;
 		this.entityType = t;		
 	}

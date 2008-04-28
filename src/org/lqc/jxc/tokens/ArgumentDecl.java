@@ -1,11 +1,12 @@
 package org.lqc.jxc.tokens;
 
+import org.lqc.jxc.Lexem;
 import org.lqc.jxc.types.Type;
 
 public class ArgumentDecl extends Declaration {
 
-	public ArgumentDecl(Type t, String id) {
-		super(t, id);		
+	public ArgumentDecl(int l, int c, Type t, String id) {
+		super(l, c, t, id);		
 	}
 	
 	@Override

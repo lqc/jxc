@@ -1,5 +1,7 @@
 package org.lqc.util;
 
+import java.util.Set;
+
 /**
  * 
  * Definition of partially ordered set. Every element
@@ -20,4 +22,6 @@ public interface POSet<K extends PartiallyOrdered<? super K>, V>
 		throws ElementNotFoundException;
 	
 	public V remove(K key);
+	
+	public Set<V> values();
 }

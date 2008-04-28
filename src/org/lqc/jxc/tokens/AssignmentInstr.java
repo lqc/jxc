@@ -1,12 +1,15 @@
 package org.lqc.jxc.tokens;
 
+import org.lqc.jxc.Lexem;
+
 public class AssignmentInstr extends Instruction {
 	
 	private String id;
 	private Expression value;
 	private VarDecl ref;
 	
-	public AssignmentInstr(String id, Expression e) {
+	public AssignmentInstr(int l, int c, String id, Expression e) {
+		super(l, c);
 		this.id = id;
 		this.value = e;		
 	}

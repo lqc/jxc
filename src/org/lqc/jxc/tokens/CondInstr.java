@@ -1,12 +1,15 @@
 package org.lqc.jxc.tokens;
 
+import org.lqc.jxc.Lexem;
+
 public class CondInstr extends Instruction {
 	
 	private Expression condition;
 	private Instruction trueBlock;
 	private Instruction falseBlock;
 		
-	public CondInstr(Expression e, Instruction i1, Instruction i2) {
+	public CondInstr(int l, int c, Expression e, Instruction i1, Instruction i2) {
+		super(l, c);
 		condition = e;
 		trueBlock = i1;
 		falseBlock = i2;		

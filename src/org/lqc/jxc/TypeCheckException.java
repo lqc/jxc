@@ -1,13 +1,17 @@
 package org.lqc.jxc;
 
-public class TypeCheckException extends CompilerException {
+import org.lqc.jxc.tokens.SyntaxTreeNode;
 
-	public TypeCheckException() {
-		super();		
+@SuppressWarnings("serial")
+public class TypeCheckException extends SyntaxErrorException {
+
+	public TypeCheckException(SyntaxTreeNode n, String msg) {
+		super(n, msg);		
 	}
 
-	public TypeCheckException(String msg) {
-		super(msg);		
+	public TypeCheckException(SyntaxTreeNode n) {
+		super(n);		
 	}
 
+	
 }

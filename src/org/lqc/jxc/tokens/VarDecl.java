@@ -1,16 +1,17 @@
 package org.lqc.jxc.tokens;
 
+import org.lqc.jxc.Lexem;
 import org.lqc.jxc.types.Type;
 
 public class VarDecl extends Declaration {
 
-	public VarDecl(Type t, String id, Expression init) {
-		super(t, id);
+	public VarDecl(int l, int c, Type t, String id, Expression init) {
+		super(l, c, t, id);
 		initialValue = init;
 	}
 	
 	public VarDecl(Type t, String id) {
-		super(t, id);
+		super(-1, -1, t, id);
 		
 		if(t.equals(Type.VOID)) 
 			initialValue = Expression.VOID;

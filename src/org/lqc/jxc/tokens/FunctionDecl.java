@@ -3,6 +3,7 @@ package org.lqc.jxc.tokens;
 import java.util.List;
 import java.util.Vector;
 
+import org.lqc.jxc.Lexem;
 import org.lqc.jxc.types.FunctionType;
 import org.lqc.jxc.types.Type;
 
@@ -11,15 +12,15 @@ public class FunctionDecl extends Declaration
 	protected ComplexInstr body;
 	protected List<ArgumentDecl> args;
 
-	public FunctionDecl(String fid, Type rt, List<ArgumentDecl> args, ComplexInstr b) {
-		super(new FunctionType(rt, listToArray(args)), fid);
+	public FunctionDecl(int l, int c, String fid, Type rt, List<ArgumentDecl> args, ComplexInstr b) {
+		super(l, c, new FunctionType(rt, listToArray(args)), fid);
 		this.args = new Vector<ArgumentDecl>();
 		this.args.addAll(args);		
 		body = b;
 	}
 	
 	public FunctionDecl(String fid, Type rt, Type... argTypes) {
-		super(new FunctionType(rt, argTypes), fid);
+		super(-1, -1, new FunctionType(rt, argTypes), fid);
 		this.args = new Vector<ArgumentDecl>();
 		this.body = new ComplexInstr();
 	}

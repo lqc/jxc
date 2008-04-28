@@ -1,13 +1,14 @@
 package org.lqc.jxc.tokens;
 
+import org.lqc.jxc.Lexem;
 import org.lqc.jxc.types.PrimitiveType;
 
 public class ConstantExpr extends Expression {
 	
 	private Object value;
 			
-	public ConstantExpr(Object c) { 
-		super(PrimitiveType.forValue(c));
+	public ConstantExpr(int l, int col, Object c) { 
+		super(l, col, PrimitiveType.forValue(c));
 		value = c;
 	}
 	

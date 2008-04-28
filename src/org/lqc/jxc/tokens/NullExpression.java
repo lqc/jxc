@@ -5,7 +5,7 @@ import org.lqc.jxc.types.Type;
 public class NullExpression extends Expression {
 	
 	public NullExpression() {
-		super(Type.ANY);	
+		super(-1, -1, Type.ANY);	
 	}
 
 	@Override

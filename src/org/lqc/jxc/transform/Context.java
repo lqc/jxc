@@ -7,8 +7,11 @@ import static org.lqc.jxc.types.PrimitiveType.STRING;
 import static org.lqc.jxc.types.Type.VOID;
 
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.lqc.jxc.CompilerException;
+import org.lqc.jxc.tokens.Declaration;
 import org.lqc.jxc.tokens.FunctionDecl;
 import org.lqc.jxc.tokens.VarDecl;
 import org.lqc.jxc.types.FunctionType;
@@ -131,7 +134,8 @@ public class Context {
 	}
 
 	public FunctionDecl getFunction(String id, FunctionType t)
-			throws ElementNotFoundException {
+			throws ElementNotFoundException 
+	{
 		POSet<Tuple<Type>, FunctionDecl> set = fmap.get(id);
 		try {
 			return set.find(t.getArgumentTypes());
@@ -181,5 +185,16 @@ public class Context {
 			return parent.toString() + " :: " + this.name;
 
 		return this.name;
+	}
+	
+	public Set<Declaration> getAllDeclarations() {
+		Set<Declaration> v = new HashSet<Declaration>();
+		
+		for(POSet<Tuple<Type>, FunctionDecl> poset : fmap.values()) {
+			v.addAll( poset.values() );			
+		}
+		
+		v.addAll( vmap.values() );		
+		return v;
 	}
 }

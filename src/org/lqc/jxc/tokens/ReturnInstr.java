@@ -1,10 +1,13 @@
 package org.lqc.jxc.tokens;
 
+import org.lqc.jxc.Lexem;
+
 public class ReturnInstr extends Instruction {
 	
 	private Expression value;
 	
-	public ReturnInstr(Expression e) {
+	public ReturnInstr(int l, int c, Expression e) {
+		super(l, c);		
 		this.value = e;
 	}
 

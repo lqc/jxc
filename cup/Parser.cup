@@ -85,7 +85,7 @@ precedence left TIMES, DIVIDE, MODULO;
 precedence left UMINUS, UPLUS, NEG;
 precedence left ELSE;
 
-prog ::= func_list:fl {: RESULT = new Program("program", fl); :};
+prog ::= func_list:fl {: RESULT = new Program(flleft, flright, "program", fl); :};
 
 func_list ::= func_list:fl func_decl:fd {: 
 				RESULT = fl;
@@ -104,11 +104,11 @@ arg_dlist_ne ::= arg_dlist_ne:al COLON arg_decl:arg	{: al.add(arg); RESULT = al;
 				              :};
 
 
-arg_decl ::= TYPE:type ID:id {: RESULT = new ArgumentDecl(type, id); :};
+arg_decl ::= TYPE:type ID:id {: RESULT = new ArgumentDecl(typeleft, typeright, type, id); :};
 
 /* Function Declaration */
 func_decl ::= TYPE:rt ID:fid LPAR arg_dlist:args RPAR complex_instr:ci {:							
-				RESULT = new FunctionDecl(fid, rt, args, ci);
+				RESULT = new FunctionDecl(rtleft, rtright, fid, rt, args, ci);
 :};
 
 /*** INSTRUCTIONS ***/
@@ -136,41 +136,41 @@ instr ::= complex_instr:ci {: RESULT = ci; :} |
 ;
 
 
-assign_instr ::= ID:id EQUAL expr:e {: 
-					RESULT = new AssignmentInstr(id, e); :} |
-				 ID:id PLUSPLUS {:
-				 	RESULT = new FunctionCall("_INC", true, new VarExpr(id)); :} |
-				 ID:id MINUSMINUS {:
-				 	RESULT = new FunctionCall("_DEC", true, new VarExpr(id)); :}
+assign_instr ::= ID:id EQUAL:op expr:e {: 
+					RESULT = new AssignmentInstr(opleft, opright, id, e); :} |
+				 ID:id PLUSPLUS:op {:
+				 	RESULT = new FunctionCall(opleft, opright, "_INC", true, new VarExpr(idleft, idright, id)); :} |
+				 ID:id MINUSMINUS:op {:
+				 	RESULT = new FunctionCall(opleft, opright, "_DEC", true, new VarExpr(idleft, idright, id)); :}
 ;
 
-cond_instr ::= IF LPAR expr:e RPAR instr:i {:
-				  RESULT = new CondInstr(e, i, Instruction.EMPTY); :} |
-			   IF LPAR expr:e RPAR instr:i1 ELSE instr:i2 {:
-			      RESULT = new CondInstr(e, i1, i2); :} 
+cond_instr ::= IF:op LPAR expr:e RPAR instr:i {:
+				  RESULT = new CondInstr(opleft, opright, e, i, Instruction.EMPTY); :} |
+			   IF:op LPAR expr:e RPAR instr:i1 ELSE instr:i2 {:
+			      RESULT = new CondInstr(opleft, opright, e, i1, i2); :} 
 ;
 
-loop_instr ::= WHILE LPAR expr:e RPAR instr:i {:
-				  RESULT = new LoopInstr(e, i, Instruction.EMPTY, Instruction.EMPTY); :} |
-			  FOR LPAR assign_instr:init SEMI expr:e SEMI assign_instr:post RPAR instr:body
+loop_instr ::= WHILE:op LPAR expr:e RPAR instr:i {:
+				  RESULT = new LoopInstr(opleft, opright, e, i, Instruction.EMPTY, Instruction.EMPTY); :} |
+			  FOR:op LPAR assign_instr:init SEMI expr:e SEMI assign_instr:post RPAR instr:body
 			  {:
-			  	RESULT = new LoopInstr(e, body, init, post); :}
+			  	RESULT = new LoopInstr(opleft, opright, e, body, init, post); :}
 ;
 
-return_instr ::= RETURN SEMI {: RESULT = new ReturnInstr(Expression.VOID); :} |
-				 RETURN expr:e SEMI {: RESULT = new ReturnInstr(e); :}
+return_instr ::= RETURN:ret SEMI {: RESULT = new ReturnInstr(retleft, retright, Expression.VOID); :} |
+				 RETURN:ret expr:e SEMI {: RESULT = new ReturnInstr(retleft, retright,e); :}
 ;
 
 /** Complex instruction **/
-complex_instr ::= LCURLY instr_list:ilist RCURLY {:
-					RESULT = new ComplexInstr(ilist); :}
+complex_instr ::= LCURLY:s instr_list:ilist RCURLY {:
+					RESULT = new ComplexInstr(sleft, sright, ilist); :}
 ;
 
 /** Variable declaration instruction **/
 var_decl ::= TYPE:t declarator_list:dlist SEMI {:
 			List<Declaration> nl = new Vector<Declaration>(dlist.size()); 					
 			for(Pair<String, Expression> decl : dlist) {
-				nl.add( new VarDecl(t, decl.first(), decl.second()));
+				nl.add( new VarDecl(tleft, tright, t, decl.first(), decl.second()));
 			};
 			RESULT = nl; 
 			:}
@@ -197,63 +197,63 @@ expr ::= bool_expr_or:e {: RESULT =e; :};
 
 /** Boolean Expressions **/
 bool_expr_or ::= bool_expr_and:e {: RESULT = e; :} |
-                 bool_expr_or:e1 LOGOR bool_expr_and:e2 {:
-                      RESULT = new FunctionCall("_LOR", true, e1, e2); :}
+                 bool_expr_or:e1 LOGOR:op bool_expr_and:e2 {:
+                      RESULT = new FunctionCall(opleft, opright, "_LOR", true, e1, e2); :}
 ; 
                       
 bool_expr_and ::= bool_expr_cmp:e {: RESULT = e; :} |
-                  bool_expr_and:e1 LOGAND bool_expr_cmp:e2 {:
-                      RESULT = new FunctionCall("_LAND", true, e1, e2); :}
+                  bool_expr_and:e1 LOGAND:op bool_expr_cmp:e2 {:
+                      RESULT = new FunctionCall(opleft, opright, "_LAND", true, e1, e2); :}
 ; 
 
 bool_expr_cmp ::= bool_expr_rel:e {: RESULT = e; :} |
-                  bool_expr_cmp:e1 EQEQ bool_expr_rel:e2 {:
-                      RESULT = new FunctionCall("_EQEQ", true, e1, e2); :} |
-                  bool_expr_cmp:e1 NEQEQ bool_expr_rel:e2 {:
-                      RESULT = new FunctionCall("_NEQEQ", true, e1, e2); :}                      
+                  bool_expr_cmp:e1 EQEQ:op bool_expr_rel:e2 {:
+                      RESULT = new FunctionCall(opleft, opright, "_EQEQ", true, e1, e2); :} |
+                  bool_expr_cmp:e1 NEQEQ:op bool_expr_rel:e2 {:
+                      RESULT = new FunctionCall(opleft, opright, "_NEQEQ", true, e1, e2); :}                      
 ; 
 
 bool_expr_rel ::= num_expr_add:e {: RESULT = e; :} |
-                  num_expr_add:e1 LT num_expr_add:e2 {:
-                      RESULT = new FunctionCall("_LT", true, e1, e2); :} |
-                  num_expr_add:e1 GT num_expr_add:e2 {:
-                      RESULT = new FunctionCall("_GT", true, e1, e2); :} |
-                  num_expr_add:e1 LTEQ num_expr_add:e2 {:
-                      RESULT = new FunctionCall("_LTEQ", true, e1, e2); :} |
-                  num_expr_add:e1 GTEQ num_expr_add:e2 {:
-                      RESULT = new FunctionCall("_GTEQ", true, e1, e2); :}
+                  num_expr_add:e1 LT:op num_expr_add:e2 {:
+                      RESULT = new FunctionCall(opleft, opright, "_LT", true, e1, e2); :} |
+                  num_expr_add:e1 GT:op num_expr_add:e2 {:
+                      RESULT = new FunctionCall(opleft, opright, "_GT", true, e1, e2); :} |
+                  num_expr_add:e1 LTEQ:op num_expr_add:e2 {:
+                      RESULT = new FunctionCall(opleft, opright, "_LTEQ", true, e1, e2); :} |
+                  num_expr_add:e1 GTEQ:op num_expr_add:e2 {:
+                      RESULT = new FunctionCall(opleft, opright, "_GTEQ", true, e1, e2); :}
 ;
 
 num_expr_add ::= num_expr_mul:e {: RESULT = e; :} |
-                  num_expr_add:e1 PLUS num_expr_mul:e2 {:
-                      RESULT = new FunctionCall("_ADD", true, e1, e2); :} |
-                  num_expr_add:e1 MINUS num_expr_mul:e2 {:
-                      RESULT = new FunctionCall("_SUB", true, e1, e2); :}
+                  num_expr_add:e1 PLUS:op num_expr_mul:e2 {:
+                      RESULT = new FunctionCall(opleft, opright,"_ADD", true, e1, e2); :} |
+                  num_expr_add:e1 MINUS:op num_expr_mul:e2 {:
+                      RESULT = new FunctionCall(opleft, opright,"_SUB", true, e1, e2); :}
 ;
 
 num_expr_mul ::= unary_expr:e {: RESULT = e; :} |
-                  num_expr_mul:e1 TIMES unary_expr:e2 {:
-                      RESULT = new FunctionCall("_TIMES", true, e1, e2); :} |
-                  num_expr_mul:e1 DIVIDE unary_expr:e2 {:
-                      RESULT = new FunctionCall("_DIVIDE", true, e1, e2); :} |
-                  num_expr_mul:e1 MODULO unary_expr:e2 {:
-                      RESULT = new FunctionCall("_DIVIDE", true, e1, e2); :}
+                  num_expr_mul:e1 TIMES:op unary_expr:e2 {:
+                      RESULT = new FunctionCall(opleft, opright,"_TIMES", true, e1, e2); :} |
+                  num_expr_mul:e1 DIVIDE:op unary_expr:e2 {:
+                      RESULT = new FunctionCall(opleft, opright,"_DIVIDE", true, e1, e2); :} |
+                  num_expr_mul:e1 MODULO:op unary_expr:e2 {:
+                      RESULT = new FunctionCall(opleft, opright,"_DIVIDE", true, e1, e2); :}
 ;
 
 unary_expr ::= simple_expr:e {: RESULT = e; :} |
-               NEG unary_expr:e {: 
-                   RESULT = new FunctionCall("_LNEG", true, e); :} |  
-               PLUS unary_expr:e {: 
-                   RESULT = new FunctionCall("_NUMID", true, e); :} %prec UPLUS |
-               MINUS unary_expr:e {: 
-                   RESULT = new FunctionCall("_NNEG", true, e); :} %prec UMINUS
+               NEG:op unary_expr:e {: 
+                   RESULT = new FunctionCall(opleft, opright, "_LNEG", true, e); :} |  
+               PLUS:op unary_expr:e {: 
+                   RESULT = new FunctionCall(opleft, opright, "_NUMID", true, e); :} %prec UPLUS |
+               MINUS:op unary_expr:e {: 
+                   RESULT = new FunctionCall(opleft, opright, "_NNEG", true, e); :} %prec UMINUS
 ;
 
-simple_expr ::= ID:id {: RESULT = new VarExpr(id); :} |
+simple_expr ::= ID:id {: RESULT = new VarExpr(idleft, idright, id); :} |
 				ID:id LPAR expr_list:elist RPAR {:
-                	RESULT = new FunctionCall(id, false, elist); :} | 
+                	RESULT = new FunctionCall(idleft, idright, id, false, elist); :} | 
                 ID:id LPAR RPAR {:
-                     RESULT = new FunctionCall(id, false); :} |
+                     RESULT = new FunctionCall(idleft, idright, id, false); :} |
                 LPAR expr:e RPAR {: RESULT = e; :} |
                 constant:c {: RESULT = c; :} 
 ;     
@@ -266,7 +266,7 @@ expr_list ::= expr:e {:
 			    RESULT = elist; :}
 ;
 
-constant ::= INT:e {: RESULT = new ConstantExpr(e); :} | 
-			 REAL:e  {: RESULT = new ConstantExpr(e); :} |
-			 STRING:e {: RESULT = new ConstantExpr(e); :} |
-			 BOOLEAN:e {: RESULT = new ConstantExpr(e); :};                        
+constant ::= INT:e {: RESULT = new ConstantExpr(eleft, eright, e); :} | 
+			 REAL:e  {: RESULT = new ConstantExpr(eleft, eright, e); :} |
+			 STRING:e {: RESULT = new ConstantExpr(eleft, eright, e); :} |
+			 BOOLEAN:e {: RESULT = new ConstantExpr(eleft, eright, e); :};                        
