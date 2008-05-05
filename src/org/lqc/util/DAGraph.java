@@ -168,6 +168,7 @@ public class DAGraph<K extends PartiallyOrdered<? super K> , V> implements POSet
 
 	public Set<V> values() {
 		HashSet<V> set = new HashSet<V>();
+		
 		for(Node n : root.children) {
 			set.add(n.value);
 			putAllChildren(n, set);

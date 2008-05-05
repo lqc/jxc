@@ -11,9 +11,11 @@ import java_cup.runtime.Symbol;
 import junit.framework.Assert;
 import junit.framework.TestCase;
 
+import org.lqc.jxc.CompilerWarning;
 import org.lqc.jxc.Lexer;
 import org.lqc.jxc.Parser;
-import org.lqc.jxc.tokens.Program;
+import org.lqc.jxc.tokens.CompileUnit;
+import org.lqc.jxc.transform.ControlFlowAnalyzer;
 import org.lqc.jxc.transform.ScopeAnalyzer;
 
 public class ParserTest extends TestCase {
@@ -40,9 +42,18 @@ public class ParserTest extends TestCase {
 			Parser parser = new Parser(scanner);
 			
 			Symbol root = parser.parse();
-			Program p = (Program)root.value;
-			// p.visitNode(new PrintingVisitor(log));
+
+			CompileUnit p = (CompileUnit)root.value;
+
 			p.visitNode(new ScopeAnalyzer());
+			
+			/* flow analysis */
+			ControlFlowAnalyzer cfa = new ControlFlowAnalyzer();
+			p.visitNode(cfa);
+						 
+			for(CompilerWarning w : cfa.getWarnings()) {
+				System.out.println(w.getMessage());
+			}
 			
 			p = p;
 			

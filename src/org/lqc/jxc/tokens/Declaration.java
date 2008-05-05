@@ -1,7 +1,7 @@
 package org.lqc.jxc.tokens;
 
-import org.lqc.jxc.Lexem;
 import org.lqc.jxc.types.Type;
+import org.lqc.util.TriStateLogic;
 
 public abstract class Declaration extends Instruction {
 	
@@ -12,7 +12,8 @@ public abstract class Declaration extends Instruction {
 	}
 	
 	protected Type entityType;
-	protected String entityID;
+	protected String entityID;	
+	
 	/**
 	 * @return the entityType
 	 */

@@ -10,6 +10,7 @@ import org.lqc.jxc.tokens.AssignmentInstr;
 import org.lqc.jxc.tokens.ComplexInstr;
 import org.lqc.jxc.tokens.CondInstr;
 import org.lqc.jxc.tokens.ConstantExpr;
+import org.lqc.jxc.tokens.Declaration;
 import org.lqc.jxc.tokens.EmptyInstruction;
 import org.lqc.jxc.tokens.Expression;
 import org.lqc.jxc.tokens.FunctionCall;
@@ -17,7 +18,7 @@ import org.lqc.jxc.tokens.FunctionDecl;
 import org.lqc.jxc.tokens.Instruction;
 import org.lqc.jxc.tokens.LoopInstr;
 import org.lqc.jxc.tokens.NullExpression;
-import org.lqc.jxc.tokens.Program;
+import org.lqc.jxc.tokens.CompileUnit;
 import org.lqc.jxc.tokens.ReturnInstr;
 import org.lqc.jxc.tokens.TreeVisitor;
 import org.lqc.jxc.tokens.VarDecl;
@@ -57,11 +58,11 @@ public class ScopeAnalyzer implements TreeVisitor {
 		envStack = new Stack<Context>();
 	}
 
-	public void visit(Program prog) {
-		push(Context.getBuiltins());
-		prog.bindStaticContext(current);
-
+	public void visit(CompileUnit prog) {
+		push(Context.getBuiltins());		
 		Context ctx = new Context(current, "<global>");
+		
+		prog.bindStaticContext(ctx);
 
 		for (FunctionDecl f : prog.getFunctions()) {
 			try {
@@ -83,7 +84,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 
 	public void visit(ArgumentDecl decl) {
 		try {
-			current.put(new VarDecl(decl.getType(), decl.getID()));
+			current.put(decl);
 		} catch (NonUniqueElementException e) {
 			throw new SyntaxErrorException(decl, String.format(
 					"Function argument '%s' redeclaration\n", decl
@@ -92,12 +93,15 @@ public class ScopeAnalyzer implements TreeVisitor {
 	}
 
 	public void visit(FunctionDecl decl) {
-		push(new Context(decl.getStaticContext(), decl.getID() + ":"
-				+ decl.getType()));
+		decl.initInnerContext(decl.getStaticContext());
+		push(decl.innerContext());		
+		
+		int localVars = 0;
 
 		try {
 			current
-					.put(new VarDecl(decl.getType().getReturnType(), "<return>"));
+					.put(new VarDecl(decl.getType().getReturnType(), 
+							Context.RETURN_ID) );
 		} catch (NonUniqueElementException e) {
 			throw new CompilerException(
 					"[INTERNAL] Return value reference already in scope. Impossible ?",
@@ -106,6 +110,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 
 		/* process arguments */
 		for (ArgumentDecl d : decl.getArgs()) {
+			localVars++;
 			d.bindStaticContext(current);
 			d.visitNode(this);
 		}
@@ -113,9 +118,13 @@ public class ScopeAnalyzer implements TreeVisitor {
 		/*
 		 * process instructions - don't create context for body
 		 */
+		decl.getBody().bindStaticContext(current);		
 		for (Instruction i : decl.getBody().getInstructions()) {
 			i.bindStaticContext(current);
 			i.visitNode(this);
+			
+			if (i instanceof VarDecl)
+				localVars++;
 
 			if (i instanceof Expression) {
 				Expression e = (Expression) i;
@@ -124,13 +133,8 @@ public class ScopeAnalyzer implements TreeVisitor {
 					throw new TypeCheckException(e,
 							"Instruction must be 'void' type");
 				}
-			}
-		}
-
-		/*
-		 * TODO check return value: without liveness analysis, we can't be sure
-		 * there will be a return statement
-		 */
+			}		
+		}						
 
 		pop();
 	}
@@ -240,6 +244,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 		Expression e = loop.getCondition();
 
 		/* calculate type */
+		e.bindStaticContext(current);
 		e.visitNode(this);
 		switch (PrimitiveType.BOOLEAN.compareTo(e.getType())) {
 		case EQUAL:
@@ -251,17 +256,21 @@ public class ScopeAnalyzer implements TreeVisitor {
 					+ "boolean type - got: " + e.getType().toString());
 		}
 
+		loop.getPostInstr().bindStaticContext(current);
 		loop.getPostInstr().visitNode(this);
+		
+		loop.getBody().bindStaticContext(current);
 		loop.getBody().visitNode(this);
 	}
 
 	public void visit(ReturnInstr ret) {
 		try {
-			VarDecl d = current.getVariable("<return>");
+			VarDecl d = current.getVariable(Context.RETURN_ID);
+			ret.getValue().visitNode(this);			
 			switch (d.getType().compareTo(ret.getValue().getType())) {
 			case GREATER:
 			case EQUAL:
-				/* ok */
+								
 				break;
 			default:
 				throw new SyntaxErrorException(ret, "Non-compatible return expression.");

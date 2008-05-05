@@ -5,11 +5,14 @@ import java.util.Vector;
 
 import org.lqc.jxc.Lexem;
 
-public class Program extends SyntaxTreeNode {
+public class CompileUnit extends SyntaxTreeNode {
 	
-	public Program(int l, int c, String name, List<FunctionDecl> fl) {
+	private String name;
+	
+	public CompileUnit(int l, int c, String name, List<FunctionDecl> fl) {
 		super(l, c);
 		functions = new Vector<FunctionDecl>(fl);
+		this.name = name;
 	}
 	
 	private List<FunctionDecl> functions;
@@ -24,5 +27,9 @@ public class Program extends SyntaxTreeNode {
 	@Override
 	public void visitNode(TreeVisitor v) {
 		v.visit(this);		
+	}
+	
+	public String getName() {
+		return name;
 	}
 }

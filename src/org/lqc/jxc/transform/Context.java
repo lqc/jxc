@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.lqc.jxc.CompilerException;
+import org.lqc.jxc.Pair;
 import org.lqc.jxc.tokens.Declaration;
 import org.lqc.jxc.tokens.FunctionDecl;
 import org.lqc.jxc.tokens.VarDecl;
@@ -23,6 +24,8 @@ import org.lqc.util.POSet;
 import org.lqc.util.Tuple;
 
 public class Context {
+	
+	public final static String RETURN_ID = "<RETURN>"; 
 
 	private HashMap<String, POSet<Tuple<Type>, FunctionDecl>> fmap;
 	private HashMap<String, VarDecl> vmap;
@@ -191,10 +194,14 @@ public class Context {
 		Set<Declaration> v = new HashSet<Declaration>();
 		
 		for(POSet<Tuple<Type>, FunctionDecl> poset : fmap.values()) {
-			v.addAll( poset.values() );			
+			for(FunctionDecl d : poset.values()) {
+				v.add(d);			
+			}
 		}
 		
-		v.addAll( vmap.values() );		
+		for(VarDecl d : vmap.values()) 
+			v.add(d);
+				
 		return v;
 	}
 }

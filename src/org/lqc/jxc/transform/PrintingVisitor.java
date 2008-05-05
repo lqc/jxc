@@ -7,7 +7,6 @@ import org.lqc.jxc.tokens.AssignmentInstr;
 import org.lqc.jxc.tokens.ComplexInstr;
 import org.lqc.jxc.tokens.CondInstr;
 import org.lqc.jxc.tokens.ConstantExpr;
-import org.lqc.jxc.tokens.Declaration;
 import org.lqc.jxc.tokens.EmptyInstruction;
 import org.lqc.jxc.tokens.Expression;
 import org.lqc.jxc.tokens.FunctionCall;
@@ -15,12 +14,13 @@ import org.lqc.jxc.tokens.FunctionDecl;
 import org.lqc.jxc.tokens.Instruction;
 import org.lqc.jxc.tokens.LoopInstr;
 import org.lqc.jxc.tokens.NullExpression;
-import org.lqc.jxc.tokens.Program;
+import org.lqc.jxc.tokens.CompileUnit;
 import org.lqc.jxc.tokens.ReturnInstr;
+import org.lqc.jxc.tokens.TreeVisitor;
 import org.lqc.jxc.tokens.VarDecl;
 import org.lqc.jxc.tokens.VarExpr;
 
-public class PrintingVisitor implements org.lqc.jxc.tokens.TreeVisitor {
+public class PrintingVisitor implements TreeVisitor {
 	
 	private PrintStream output;
 	
@@ -28,7 +28,7 @@ public class PrintingVisitor implements org.lqc.jxc.tokens.TreeVisitor {
 		this.output = out;		
 	}
 
-	public void visit(Program p) {
+	public void visit(CompileUnit p) {
 		for(FunctionDecl d : p.getFunctions()) {
 			d.visitNode(this);
 		};	

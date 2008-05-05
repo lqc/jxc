@@ -1,9 +1,8 @@
 package org.lqc.jxc.tokens;
 
-import org.lqc.jxc.Lexem;
 import org.lqc.jxc.types.Type;
 
-public class VarDecl extends Declaration {
+public class VarDecl extends Declaration {	
 
 	public VarDecl(int l, int c, Type t, String id, Expression init) {
 		super(l, c, t, id);

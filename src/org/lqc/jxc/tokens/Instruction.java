@@ -1,14 +1,14 @@
 package org.lqc.jxc.tokens;
 
-import org.lqc.jxc.Lexem;
+import org.lqc.util.TriStateLogic;
 
 public abstract class Instruction extends SyntaxTreeNode 
 {
-	protected boolean reachable;
+	protected TriStateLogic reachable;
 	
 	protected Instruction(int l, int c) {
 		super(l, c);
-		this.reachable = false;
+		this.reachable = TriStateLogic.UNKNOWN;
 	}
 
 	public static Instruction EMPTY = new EmptyInstruction();
@@ -16,14 +16,14 @@ public abstract class Instruction extends SyntaxTreeNode
 	/**
 	 * @return the reachable
 	 */
-	public boolean isReachable() {
+	public TriStateLogic isReachable() {
 		return reachable;
 	}
 
 	/**
 	 * @param reachable the reachable to set
 	 */
-	public void setReachable(boolean reachable) {
+	public void setReachable(TriStateLogic reachable) {
 		this.reachable = reachable;
 	}
 	

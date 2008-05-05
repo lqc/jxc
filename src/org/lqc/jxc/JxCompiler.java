@@ -7,7 +7,8 @@ import java.io.InputStream;
 
 import java_cup.runtime.Symbol;
 
-import org.lqc.jxc.tokens.Program;
+import org.lqc.jxc.tokens.CompileUnit;
+import org.lqc.jxc.transform.ControlFlowAnalyzer;
 import org.lqc.jxc.transform.ScopeAnalyzer;
 
 
@@ -60,12 +61,18 @@ public class JxCompiler {
 			Symbol root = parser.parse();
 			
 			/* Extract the program node */
-			Program p = (Program)root.value;
+			CompileUnit p = (CompileUnit)root.value;
 			
 			/* Visibility and type checking */
 			p.visitNode(new ScopeAnalyzer());
 			
-			/* TODO liveness analysis */
+			/* flow analysis */
+			//ControlFlowAnalyzer cfa = new ControlFlowAnalyzer();
+			//p.visitNode(cfa);
+						 
+			//for(CompilerWarning w : cfa.getWarnings()) {
+			//	System.out.println(w.getMessage());
+			//}
 			
 			/* TODO smash the tree to binary IL */
 			
