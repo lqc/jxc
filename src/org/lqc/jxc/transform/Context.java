@@ -11,7 +11,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.lqc.jxc.CompilerException;
-import org.lqc.jxc.Pair;
+import org.lqc.jxc.tokens.BuiltinDecl;
 import org.lqc.jxc.tokens.Declaration;
 import org.lqc.jxc.tokens.FunctionDecl;
 import org.lqc.jxc.tokens.VarDecl;
@@ -31,103 +31,6 @@ public class Context {
 	private HashMap<String, VarDecl> vmap;
 	private Context parent;
 	private String name;
-
-	protected Context() {
-		this(null, "<builtin>");
-	}
-
-	public static Context getBuiltins() {
-		/* Define builtin functions */
-		Context ctx = new Context();
-
-		FunctionDecl func;
-
-		try {
-			/* Integer numeric operations */
-			func = new FunctionDecl("_ADD", INT, INT, INT);			
-			ctx.put(func);
-			func = new FunctionDecl("_SUB", INT, INT, INT);					
-			ctx.put(func);
-			func = new FunctionDecl("_TIMES", INT, INT, INT);
-			ctx.put(func);
-			func = new FunctionDecl("_DIVIDE", INT, INT, INT);
-			ctx.put(func);
-			func = new FunctionDecl("_NNEG", INT, INT);
-			ctx.put(func);
-			func = new FunctionDecl("_DEC", INT, INT);
-			ctx.put(func);
-			func = new FunctionDecl("_INC", INT, INT);
-			ctx.put(func);
-
-			/* Integer Boolean operators */
-			func = new FunctionDecl("_EQEQ", BOOLEAN, INT, INT);
-			ctx.put(func);
-			func = new FunctionDecl("_NEQEQ", BOOLEAN, INT, INT);
-			ctx.put(func);
-			func = new FunctionDecl("_GT", BOOLEAN, INT, INT);
-			ctx.put(func);
-			func = new FunctionDecl("_LT", BOOLEAN, INT, INT);
-			ctx.put(func);
-			func = new FunctionDecl("_GTEQ", BOOLEAN, INT, INT);
-			ctx.put(func);
-			func = new FunctionDecl("_LTEQ", BOOLEAN, INT, INT);
-			ctx.put(func);
-
-			/* Real numeric operations */
-			func = new FunctionDecl("_ADD", REAL, REAL, REAL);
-			ctx.put(func);
-			func = new FunctionDecl("_SUB", REAL, REAL, REAL);
-			ctx.put(func);
-			func = new FunctionDecl("_TIMES", REAL, REAL, REAL);
-			ctx.put(func);
-			func = new FunctionDecl("_DIVIDE", REAL, REAL, REAL);
-			ctx.put(func);
-			func = new FunctionDecl("_NNEG", REAL, REAL);
-			ctx.put(func);
-
-			/* Real Boolean operators */
-			func = new FunctionDecl("_EQEQ", BOOLEAN, REAL, REAL);
-			ctx.put(func);
-			func = new FunctionDecl("_NEQEQ", BOOLEAN, REAL, REAL);
-			ctx.put(func);
-			func = new FunctionDecl("_GT", BOOLEAN, REAL, REAL);
-			ctx.put(func);
-			func = new FunctionDecl("_LT", BOOLEAN, REAL, REAL);
-			ctx.put(func);
-			func = new FunctionDecl("_GTEQ", BOOLEAN, REAL, REAL);
-			ctx.put(func);
-			func = new FunctionDecl("_LTEQ", BOOLEAN, REAL, REAL);
-			ctx.put(func);
-
-			/* Boolean boolean operators */
-			func = new FunctionDecl("_EQEQ", BOOLEAN, BOOLEAN, BOOLEAN);
-			ctx.put(func);
-			func = new FunctionDecl("_LAND", BOOLEAN, BOOLEAN, BOOLEAN);
-			ctx.put(func);
-			func = new FunctionDecl("_LOR", BOOLEAN, BOOLEAN, BOOLEAN);
-			ctx.put(func);
-			func = new FunctionDecl("_LNEG",BOOLEAN, BOOLEAN);
-			ctx.put(func);
-
-			/* I/O Operations */
-			func = new FunctionDecl("readInt", INT);
-			ctx.put(func);
-			func = new FunctionDecl("readDouble", REAL);
-			ctx.put(func);
-			func = new FunctionDecl("printInt", VOID, INT);
-			ctx.put(func);
-			func = new FunctionDecl("printDouble", VOID, REAL);
-			ctx.put(func);
-			func = new FunctionDecl("printString", VOID, STRING);
-			ctx.put(func);
-
-		} catch (NonUniqueElementException e) {
-			throw new CompilerException(
-				"[INTERNAL] Overlaping built-in definitions.", e);
-		}
-
-		return ctx;
-	}
 
 	public Context(Context parent, String name) {
 		fmap = new HashMap<String, POSet<Tuple<Type>, FunctionDecl>>();
@@ -188,6 +91,17 @@ public class Context {
 			return parent.toString() + " :: " + this.name;
 
 		return this.name;
+	}
+	
+	public Set<FunctionDecl> getAllFunctionDecl() {
+		Set<FunctionDecl> v = new HashSet<FunctionDecl>();
+		
+		for(POSet<Tuple<Type>, FunctionDecl> poset : fmap.values()) {
+			for(FunctionDecl d : poset.values()) {
+				v.add(d);			
+			}
+		}				
+		return v;
 	}
 	
 	public Set<Declaration> getAllDeclarations() {

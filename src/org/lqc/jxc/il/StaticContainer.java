@@ -1,19 +1,27 @@
 package org.lqc.jxc.il;
 
+import java.util.Collection;
+
 import org.lqc.jxc.types.FunctionType;
 import org.lqc.jxc.types.Type;
 
 /** Interface for entities that declare static context. */
 public interface StaticContainer {
 	
-	public StaticContainer parent();
+	public StaticContainer container();
 	
-	public Function getFunction(Signature<FunctionType> t);
-	public Function newFunction(Signature<FunctionType> t,
+	public Callable get(Signature<FunctionType> t);
+	public Callable newFunc(Signature<FunctionType> t,
 			Signature<Type>... args);
 	
-	public Variable getVariable(Signature<Type> t);	
-	public Variable newVariable(Signature<Type> t);
- 
-
+	public Variable get(Signature<Type> t);	
+	public Variable newVar(Signature<Type> t);
+		
+	public Collection<Callable> allFunctions();
+	public Collection<Variable> allVariables();
+	
+	public Label getUniqueLabel();
+	
+	public String absolutePath();
+	public String name();
 }

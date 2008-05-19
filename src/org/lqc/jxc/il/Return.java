@@ -4,8 +4,8 @@ public class Return extends Operation {
 	
 	public Expression returnValue;
 
-	public Return(StaticContainer cont, Expression e) {
-		super(cont);
+	public Return(StaticContainer cont, int line, Expression e) {
+		super(cont, line);
 		
 		returnValue = e;
 	}

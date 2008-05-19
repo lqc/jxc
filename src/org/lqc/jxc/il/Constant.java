@@ -2,14 +2,18 @@ package org.lqc.jxc.il;
 
 import org.lqc.jxc.types.Type;
 
-public class Constant extends Expression {
+public class Constant<T> extends Expression {
 	
-	private Object value;
+	private T value;
 
-	public Constant(StaticContainer cont, Type t, Object v) {
-		super(cont, t);
+	public Constant(StaticContainer cont, int line, Type t, T v) {
+		super(cont, line, t);
 		
 		value = v;
+	}
+	
+	public T value() {
+		return value;
 	}
 
 }

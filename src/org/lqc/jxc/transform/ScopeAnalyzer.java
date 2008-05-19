@@ -7,18 +7,18 @@ import org.lqc.jxc.SyntaxErrorException;
 import org.lqc.jxc.TypeCheckException;
 import org.lqc.jxc.tokens.ArgumentDecl;
 import org.lqc.jxc.tokens.AssignmentInstr;
+import org.lqc.jxc.tokens.CompileUnit;
 import org.lqc.jxc.tokens.ComplexInstr;
 import org.lqc.jxc.tokens.CondInstr;
 import org.lqc.jxc.tokens.ConstantExpr;
-import org.lqc.jxc.tokens.Declaration;
 import org.lqc.jxc.tokens.EmptyInstruction;
 import org.lqc.jxc.tokens.Expression;
 import org.lqc.jxc.tokens.FunctionCall;
 import org.lqc.jxc.tokens.FunctionDecl;
+import org.lqc.jxc.tokens.IncrementInstr;
 import org.lqc.jxc.tokens.Instruction;
 import org.lqc.jxc.tokens.LoopInstr;
 import org.lqc.jxc.tokens.NullExpression;
-import org.lqc.jxc.tokens.CompileUnit;
 import org.lqc.jxc.tokens.ReturnInstr;
 import org.lqc.jxc.tokens.TreeVisitor;
 import org.lqc.jxc.tokens.VarDecl;
@@ -54,15 +54,15 @@ public class ScopeAnalyzer implements TreeVisitor {
 		current = envStack.pop();
 	}
 
-	public ScopeAnalyzer() {
+	public ScopeAnalyzer(Context topContext) {
 		envStack = new Stack<Context>();
+		push(topContext);
 	}
 
-	public void visit(CompileUnit prog) {
-		push(Context.getBuiltins());		
-		Context ctx = new Context(current, "<global>");
-		
-		prog.bindStaticContext(ctx);
+	public void visit(CompileUnit prog) 
+	{	
+		prog.bindStaticContext(current);
+		Context ctx = new Context(current, "<global>");		
 
 		for (FunctionDecl f : prog.getFunctions()) {
 			try {
@@ -91,7 +91,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 							.getID()));
 		}
 	}
-
+	
 	public void visit(FunctionDecl decl) {
 		decl.initInnerContext(decl.getStaticContext());
 		push(decl.innerContext());		
@@ -118,8 +118,9 @@ public class ScopeAnalyzer implements TreeVisitor {
 		/*
 		 * process instructions - don't create context for body
 		 */
-		decl.getBody().bindStaticContext(current);		
-		for (Instruction i : decl.getBody().getInstructions()) {
+		decl.getBody().bindStaticContext(current);
+		
+		for (Instruction i : decl.getBody()) {
 			i.bindStaticContext(current);
 			i.visitNode(this);
 			
@@ -205,7 +206,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 	public void visit(ComplexInstr instr) {
 		push(new Context(current, "block"));
 
-		for (Instruction i : instr.getInstructions()) {
+		for (Instruction i : instr) {
 			i.bindStaticContext(current);
 			i.visitNode(this);
 		}
@@ -237,6 +238,45 @@ public class ScopeAnalyzer implements TreeVisitor {
 					"No match for variable '%s' in current scope.\n", instr
 							.getId()));
 		}
+	}
+	
+	public void visit(IncrementInstr instr) {
+		VarDecl d;
+		
+		try {
+			d = current.getVariable(instr.getId());
+			instr.setRef(d);
+		} catch (ElementNotFoundException e) {
+			throw new SyntaxErrorException(instr, String.format(
+				"No match for variable '%s' in current scope.\n", instr
+						.getId()));			
+		}
+			
+		/* match increment */
+		FunctionType ft = new FunctionType(Type.VOID, d.getType(), PrimitiveType.INT);
+		FunctionDecl fd;
+			
+		try {
+			fd = current.getFunction("_INC", ft);
+			
+		} catch (ElementNotFoundException e) {
+			/* the type has no defined _INC function */								
+			ConstantExpr ce = new ConstantExpr(
+					instr.getLine(), instr.getColumn(),
+					new Integer(instr.getChange()) );
+			ce.visitNode(this);
+				
+			VarExpr ve = new VarExpr(
+					instr.getLine(), instr.getColumn(), d.getID());
+			ve.visitNode(this);
+				
+			FunctionCall fc = new FunctionCall(
+					instr.getLine(), instr.getColumn(), "_ADD", ce, ve);
+			fc.visitNode(this);
+			fd = fc.getRef();
+		}	
+		
+		instr.setAction(fd);		
 	}
 
 	public void visit(LoopInstr loop) {
@@ -316,5 +356,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 	public void visit(EmptyInstruction v) {
 		// nothing
 	}
+
+	
 
 }

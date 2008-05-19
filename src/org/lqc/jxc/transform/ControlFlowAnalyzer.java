@@ -102,7 +102,7 @@ public class ControlFlowAnalyzer implements TreeVisitor {
 		}		
 		
 		/* Traverse instruction */
-		for(Instruction i : decl.getBody().getInstructions()) 
+		for(Instruction i : decl.getBody()) 
 		{
 			/* There was a return. */  
 			if(map.get(retVar).write.equals(TRUE)) {
@@ -168,7 +168,7 @@ public class ControlFlowAnalyzer implements TreeVisitor {
 		}		
 		
 		/* Traverse instruction */
-		for(Instruction i : instr.getInstructions()) 
+		for(Instruction i : instr) 
 		{
 			if(i instanceof Declaration) 
 				map.put((Declaration)i, new VarInfo());				

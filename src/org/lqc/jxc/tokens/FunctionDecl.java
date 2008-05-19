@@ -4,13 +4,12 @@ import java.util.List;
 import java.util.Vector;
 
 import org.lqc.jxc.transform.Context;
-
 import org.lqc.jxc.types.FunctionType;
 import org.lqc.jxc.types.Type;
 
 public class FunctionDecl extends Declaration	
 {	
-	protected ComplexInstr body;
+	protected Instruction body;
 	protected List<ArgumentDecl> args;
 	
 	/** Table of local variables. This is filled in
@@ -18,19 +17,24 @@ public class FunctionDecl extends Declaration
 	 */
 	protected Context innerContext;
 	
-	public FunctionDecl(int l, int c, String fid, Type rt, List<ArgumentDecl> args, ComplexInstr b) {
+	public FunctionDecl(int l, int c, String fid, FunctionType t) {
+		super(l, c, t, fid);
+		this.args = new Vector<ArgumentDecl>();
+		
+		int i = 0;
+		for(Type at : t.getArgumentTypes())
+			args.add( new ArgumentDecl(l, c, at, "arg"+i++) );
+					
+		body = Instruction.EMPTY;		
+	}
+	
+	public FunctionDecl(int l, int c, String fid, Type rt, List<ArgumentDecl> args, Instruction b) {
 		super(l, c, new FunctionType(rt, listToArray(args)), fid);
 		this.args = new Vector<ArgumentDecl>();
 		this.args.addAll(args);		
 		body = b;		
-	}
-	
-	public FunctionDecl(String fid, Type rt, Type... argTypes) {
-		super(-1, -1, new FunctionType(rt, argTypes), fid);
-		this.args = new Vector<ArgumentDecl>();
-		this.body = new ComplexInstr();
-	}
-	
+	}	
+		
 	private static Type[] listToArray(List<ArgumentDecl> args) {
 		Type[] types = new Type[args.size()];
 		int i = 0;
@@ -43,7 +47,7 @@ public class FunctionDecl extends Declaration
 	/**
 	 * @return the body
 	 */
-	public ComplexInstr getBody() {
+	public Instruction getBody() {
 		return body;
 	}
 
@@ -72,5 +76,6 @@ public class FunctionDecl extends Declaration
 	
 	public Context innerContext() {
 		return innerContext;
-	}
+	}	
+	
 }

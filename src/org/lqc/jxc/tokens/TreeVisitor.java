@@ -19,4 +19,6 @@ public interface TreeVisitor{
 	
 	public void visit(NullExpression v);
 	public void visit(EmptyInstruction v);
+
+	public void visit(IncrementInstr incrementInstr);
 }

@@ -1,7 +1,8 @@
 package org.lqc.util;
 
-import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 
 public class Tuple<T extends PartiallyOrdered<T>> 
@@ -10,31 +11,28 @@ public class Tuple<T extends PartiallyOrdered<T>>
 
 {
 	
-	private T[] tuple;
+	private ArrayList<T> tuple;
 	
 	public Tuple(T... elements) {
-		tuple = elements;	
+		tuple = new ArrayList<T>(elements.length);
+		for(T e : elements)
+			tuple.add(e);			
 	}		
 	
 	public Tuple(Collection<T> col) {
 		// tuple = (T[]) new NoncomparableObject[0];
-		tuple = (T[]) col.toArray();
-		
-		int i=0;
-		for(T elem : col) {
-			tuple[i] = elem;
-			i++;
-		}		
+		tuple = new ArrayList<T>();
+		tuple.addAll(col);
 	}
 
 	public Relation compareTo(Tuple<T> other) {
 		Relation c = Relation.EQUAL;
 		
-		if(other.tuple.length != this.tuple.length)
+		if(other.tuple.size() != this.tuple.size())
 			return Relation.NONCOMPARABLE;
 		
-		for(int i=0; i < tuple.length; i++) {
-			Relation r = tuple[i].compareTo(other.tuple[i]);
+		for(int i=0; i < tuple.size(); i++) {
+			Relation r = tuple.get(i).compareTo(other.tuple.get(i));
 			
 			if(r.equals(Relation.NONCOMPARABLE))
 				return Relation.NONCOMPARABLE;
@@ -55,11 +53,11 @@ public class Tuple<T extends PartiallyOrdered<T>>
 	}
 	
 	public int size() {
-		return tuple.length;
+		return tuple.size();
 	}	
 	
 	public T get(int index) {
-		return tuple[index];
+		return tuple.get(index);
 	}
 
 	public Iterator<T> iterator() {
@@ -74,11 +72,11 @@ public class Tuple<T extends PartiallyOrdered<T>>
 		}
 
 		public boolean hasNext() {
-			return (lastIndex < tuple.length);			
+			return (lastIndex < tuple.size());			
 		}
 
 		public T next() {
-			return tuple[lastIndex++];
+			return tuple.get(lastIndex++);
 		}
 
 		public void remove() {
@@ -89,13 +87,13 @@ public class Tuple<T extends PartiallyOrdered<T>>
 	public String toString() {
 		StringBuffer buf = new StringBuffer();
 		buf.append("(");
-		for(int i=0; i < tuple.length-1; i++)
+		for(int i=0; i < tuple.size()-1; i++)
 		{
-			buf.append(tuple[i].toString());
+			buf.append(tuple.get(i).toString());
 			buf.append(", ");
 		}
 		
-		buf.append(tuple[tuple.length-1].toString());
+		buf.append(tuple.get(tuple.size()-1).toString());
 		buf.append(")");
 		return buf.toString();			
 	}

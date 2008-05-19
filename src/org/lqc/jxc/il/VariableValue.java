@@ -1,13 +1,17 @@
 package org.lqc.jxc.il;
 
+
 public class VariableValue extends Expression 
 {	
 	protected Variable reference;
 	
-	public VariableValue(StaticContainer cont, Variable v)
+	public VariableValue(StaticContainer cont, int line, Variable v)
 	{
-		super(cont, v.signature.type);	
+		super(cont, line, v.signature.type);	
 		reference = v;
 	}
-
+	
+	public Variable reference() {
+		return reference;
+	}
 }

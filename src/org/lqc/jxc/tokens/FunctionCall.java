@@ -9,23 +9,20 @@ import org.lqc.jxc.types.Type;
 public class FunctionCall extends Expression {
 	
 	private String fid;
-	private List<Expression> args;
-	private boolean isBuiltin;
-	
+	private List<Expression> args;		
 	private FunctionDecl ref;	
 	
-	public FunctionCall(int l, int c, String fid, boolean builtin, List<Expression> args) {
+	public FunctionCall(int l, int c, String fid, List<Expression> args) {
 		super(l, c, Type.ANY);
 		
-		this.fid = fid;
-		this.isBuiltin = builtin;
+		this.fid = fid;		
 		this.args = args;	
 		
 		this.ref = null;
 	}
 	
-	public FunctionCall(int l, int c, String fid, boolean builtin, Expression... args) {
-		this(l, c, fid, builtin, new Vector<Expression>(args.length));
+	public FunctionCall(int l, int c, String fid, Expression... args) {
+		this(l, c, fid, new Vector<Expression>(args.length));
 		for(Expression e : args) { this.args.add(e); }		
 	}
 	
@@ -46,13 +43,6 @@ public class FunctionCall extends Expression {
 	 */
 	public List<Expression> getArgs() {
 		return args;
-	}
-
-	/**
-	 * @return the isBuiltin
-	 */
-	public boolean isBuiltin() {
-		return isBuiltin;
 	}
 	
 	public void bindRef(FunctionDecl d) {

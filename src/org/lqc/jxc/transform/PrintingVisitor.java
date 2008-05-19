@@ -11,6 +11,7 @@ import org.lqc.jxc.tokens.EmptyInstruction;
 import org.lqc.jxc.tokens.Expression;
 import org.lqc.jxc.tokens.FunctionCall;
 import org.lqc.jxc.tokens.FunctionDecl;
+import org.lqc.jxc.tokens.IncrementInstr;
 import org.lqc.jxc.tokens.Instruction;
 import org.lqc.jxc.tokens.LoopInstr;
 import org.lqc.jxc.tokens.NullExpression;
@@ -66,7 +67,7 @@ public class PrintingVisitor implements TreeVisitor {
 
 	public void visit(ComplexInstr instr) {
 		this.output.println("[BLOCK-START]");
-		for(Instruction i : instr.getInstructions()) {
+		for(Instruction i : instr) {
 			i.visitNode(this);			
 		}		
 		this.output.println("[BLOCK-END]");		
@@ -116,6 +117,14 @@ public class PrintingVisitor implements TreeVisitor {
 	
 	public void visit(EmptyInstruction v) {
 		this.output.print("<empty>");		
+	}
+
+	public void visit(IncrementInstr instr) {
+		this.output.printf("[INSTR] '%s' += %d\n", 
+				instr.getId(), instr.getChange() );
+		
+		
+		
 	}
 
 }

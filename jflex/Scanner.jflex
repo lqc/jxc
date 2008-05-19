@@ -100,11 +100,13 @@ Id = {Letter}({AlphaNum}|_)*
 "true" { return newSymbol("Boolean", sym.BOOLEAN, new Boolean(true)); }
 "false" { return newSymbol("Boolean", sym.BOOLEAN, new Boolean(false)); }
 
-"if" { return newSymbol("Identifier", sym.IF); }
-"else" { return newSymbol("Identifier", sym.ELSE); }
-"for" { return newSymbol("Identifier", sym.FOR); }
-"while" { return newSymbol("Identifier", sym.WHILE); }
-"return" { return newSymbol("Identifier", sym.RETURN); }
+"if" { return newSymbol("Keyword", sym.IF); }
+"else" { return newSymbol("Keyword", sym.ELSE); }
+"for" { return newSymbol("Keyword", sym.FOR); }
+"while" { return newSymbol("Keyword", sym.WHILE); }
+"return" { return newSymbol("Keyword", sym.RETURN); }
+"defines" { return newSymbol("Keyword", sym.DEFINES); }
+"implements" { return newSymbol("Keyword", sym.DEFINES); }
 
 {Real} 		{ return newSymbol("Real", sym.REAL, new Double(yytext()) ); }
 {Integer}	{ return newSymbol("Integer", sym.INT, new Integer(yytext()) ); }

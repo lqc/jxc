@@ -1,6 +1,5 @@
 package org.lqc.jxc.tokens;
 
-import org.lqc.jxc.Lexem;
 
 public class AssignmentInstr extends Instruction {
 	

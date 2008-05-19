@@ -1,9 +1,17 @@
 package org.lqc.jxc.il;
 
+import java.lang.reflect.Method;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
+import org.lqc.jxc.javavm.FunctionAnnotation;
+import org.lqc.jxc.javavm.JVMBranch;
+import org.lqc.jxc.javavm.JVMPrimitive;
 import org.lqc.jxc.types.FunctionType;
 import org.lqc.jxc.types.Type;
+import org.lqc.jxc.types.TypeParser;
 
 /** 
  * 
@@ -12,61 +20,105 @@ import org.lqc.jxc.types.Type;
  */
 public class Module implements StaticContainer {
 	
+	private static final StaticContainer NULL_CONTAINER = new NullContainer();	
+	
 	protected StaticContainer slink;	
 	protected String moduleName;
 	
 	protected Map<Signature<Type>, Variable> vmap;
-	protected Map<Signature<FunctionType>, Function> fmap;
+	protected Map<Signature<FunctionType>, Callable> fmap;
+	
+	public <T> Module(Class<T> cls) {
+		/* reconstruct module definition from class */
+		this.moduleName = cls.getName();
+		slink = NULL_CONTAINER;
+		this.fmap = new HashMap<Signature<FunctionType>, Callable>();
+		
+		for(Method m : cls.getMethods()) {
+			Signature<FunctionType> fsig;
+			Signature<Type>[] asigs;
+									
+			FunctionAnnotation fa = m.getAnnotation(FunctionAnnotation.class);			
+			
+			if(fa != null) { 
+				FunctionType type = (FunctionType)TypeParser.parse(fa.type());				
+				fsig = new Signature<FunctionType>(fa.name(), type);
+				
+			}
+			else {
+				fsig = new Signature<FunctionType>(m);				
+			}
+				
+			JVMPrimitive pa = m.getAnnotation(JVMPrimitive.class);
+			JVMBranch ba = m.getAnnotation(JVMBranch.class);
+						
+			if(pa == null && ba != null) {
+				Label l1 = this.getUniqueLabel();				
+				Label l2 = this.getUniqueLabel();
+				StringBuffer inline = new StringBuffer();
+				inline.append(String.format(ba.value(), l1.getName()));
+				inline.append('\n');
+				inline.append("iconst_0\n");
+				inline.append("goto ");
+				inline.append(l2.getName());
+				inline.append('\n');
+				inline.append(l1.emmit());
+				inline.append('\n');
+				inline.append("iconst_0\n");
+				inline.append(l2.emmit());
+				inline.append('\n');
+				
+				this.fmap.put(fsig, new Builtin(fsig, inline.toString(), 
+						ba.value()) );
+				continue;							
+			}
+			
+			if(pa != null) {
+				String bt = "";
+				if(ba != null)
+					bt = ba.value();
+				
+				this.fmap.put(fsig, new Builtin(fsig, pa.value(), bt) );
+				continue;
+			}
+				
+			asigs = new Signature[fsig.type.getArity()];
+			int i=0;
+			for(Type t : fsig.type.getArgumentTypes()) 
+				asigs[i++] = new Signature<Type>("arg"+i, t);				
+			
+			
+			this.newFunc(fsig, asigs);
+		}
+	}
 	
 	public Module(String name) {
 		this.moduleName = name;
-		
-		slink = new StaticContainer() {
-			public Function getFunction(Signature<FunctionType> t) {				
-				return null;
-			}
-
-			public Variable getVariable(Signature<Type> t) {			
-				return null;
-			}
-
-			public StaticContainer parent() {
-				return null;
-			}
-
-			public Function newFunction(Signature<FunctionType> t,
-					Signature<Type>... args) {
-				throw new UnsupportedOperationException();				
-			}
-
-			public Variable newVariable(Signature<Type> t) {
-				// TODO Auto-generated method stub
-				throw new UnsupportedOperationException();
-			}			
-		};
+		this.fmap = new HashMap<Signature<FunctionType>, Callable>();		
+		slink = NULL_CONTAINER; 
 	}
 	
-	public Function getFunction(Signature<FunctionType> sig) {
-		Function f = fmap.get(sig);
+	public Callable get(Signature<FunctionType> sig) {
+		Callable f = fmap.get(sig);
 		if(f == null)
-			return slink.getFunction(sig);
+			return slink.get(sig);
 		
 		return f;
 	}
 
-	public Variable getVariable(Signature<Type> sig) {
+	public Variable get(Signature<Type> sig) {
 		Variable v = vmap.get(sig);
 		if(v == null)
-			return slink.getVariable(sig);
+			return slink.get(sig);
 		
 		return v;
 	}
 
-	public StaticContainer parent() {
+	public StaticContainer container() {
 		return slink;
 	}
 
-	public Function newFunction(Signature<FunctionType> t,
+	public Function newFunc(Signature<FunctionType> t,
 			Signature<Type>... args) {
 		Function f = new Function(this, t, args);
 		fmap.put(t, f);
@@ -81,8 +133,86 @@ public class Module implements StaticContainer {
 		return ++_lastID;
 	}
 	
-	public Variable newVariable(Signature<Type> t) {
+	public Variable newVar(Signature<Type> t) {
 		Variable v = new Variable(this, genLUID(), t);
 		vmap.put(t, v);
 		return v;
-	}}
+	}
+
+	/**
+	 * @return the moduleName
+	 */
+	public String getModuleName() {
+		return moduleName;
+	}
+	
+	public Collection<Callable> allFunctions() {
+		return fmap.values();
+	}
+
+	public Collection<Variable> allVariables() {
+		return vmap.values();
+	}
+	
+	private int _labelID = 0;
+
+	public Label getUniqueLabel() {
+		return new Label("Label" + _labelID++);		
+	}
+
+	public String absolutePath() {
+		if(slink.name() == null)
+			return name();
+		
+		return slink.absolutePath() + "/" + name();		
+		
+	}
+
+	public String name() {
+		return this.moduleName;
+	}
+	
+	
+	private static class NullContainer implements StaticContainer {
+		public Function get(Signature<FunctionType> t) {				
+			return null;
+		}
+
+		public Variable get(Signature<Type> t) {			
+			return null;
+		}
+
+		public StaticContainer container() {
+			return null;
+		}
+
+		public Callable newFunc(Signature<FunctionType> t,
+				Signature<Type>... args) {
+			throw new UnsupportedOperationException();				
+		}
+
+		public Variable newVar(Signature<Type> t) {				
+			throw new UnsupportedOperationException();
+		}
+
+		public Collection<Callable> allFunctions() {
+			return Collections.EMPTY_LIST;
+		}
+
+		public Collection<Variable> allVariables() {
+			return Collections.EMPTY_LIST;
+		}
+
+		public Label getUniqueLabel() {
+			throw new UnsupportedOperationException();
+		}
+
+		public String absolutePath() {
+			return "";
+		}
+
+		public String name() {
+			return null;
+		}	
+	};
+}

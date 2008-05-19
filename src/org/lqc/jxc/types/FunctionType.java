@@ -1,5 +1,6 @@
 package org.lqc.jxc.types;
 
+import java.util.Collection;
 import java.util.Iterator;
 
 import org.lqc.util.Relation;
@@ -7,10 +8,10 @@ import org.lqc.util.Tuple;
 
 public class FunctionType extends Type {
 	
-/*	public FunctionType(Type rt, Collection<Type> types) {		
+	public FunctionType(Type rt, Collection<Type> types) {		
 		this.returnType = rt;
 		this.argsType = new Tuple<Type>(types);				
-	} */
+	} 
 	
 	public FunctionType(Type rt, Type... types) {		
 		this.returnType = rt;

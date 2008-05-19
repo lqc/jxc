@@ -1,15 +1,21 @@
 package org.lqc.jxc.il;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Vector;
 
 import org.lqc.jxc.types.FunctionType;
 import org.lqc.jxc.types.Type;
 
 /** Definition of a standalone function. */
-public class Function implements StaticContainer {
+public class Function implements StaticContainer, Callable,
+	Iterable<Operation>
+{
 	
 	/** Function name. */
 	protected Signature<FunctionType> signature;
@@ -35,7 +41,7 @@ public class Function implements StaticContainer {
 	private int genLUID() {
 		return ++_lastID;
 	}
-	
+		
 	public Function(StaticContainer container, 
 			Signature<FunctionType> sig,
 			Signature<Type>... args)
@@ -54,9 +60,11 @@ public class Function implements StaticContainer {
 			localVars.add(v.localID, v);
 			amap.put(s, v.localID);
 		}		
+		
+		ops = new Vector<Operation>();
 	}
 	
-	public Variable newVariable(Signature<Type> signature) {
+	public Variable newVar(Signature<Type> signature) {
 		Variable v = new Variable(this, genLUID(), signature);
 		
 		localVars.add(v.localID, v);
@@ -64,30 +72,60 @@ public class Function implements StaticContainer {
 		return v;
 	}
 	
-	public Function getFunction(Signature<FunctionType> sig) {
-		return slink.getFunction(sig);		
+	public Callable get(Signature<FunctionType> sig) {
+		return slink.get(sig);		
 	}
 
-	public Variable getVariable(Signature<Type> sig) {
+	public Variable get(Signature<Type> sig) {
 		Variable v = localVars.get(vmap.get(sig));
 		if(v == null) 
-			return slink.getVariable(sig);
+			return slink.get(sig);
 		
 		return v;
 	}	
-
-	public StaticContainer parent() {
-		return slink;
-	}	
-	
 	
 	public void addOp(Operation op) {
 		/* TODO: do something more here ? */
 		ops.add(op);
 	}
 
-	public Function newFunction(Signature<FunctionType> t,
+	public Callable newFunc(Signature<FunctionType> t,
 			Signature<Type>... args) {
 		throw new UnsupportedOperationException();
 	}
+
+	public Collection<Callable> allFunctions() {
+		return Collections.EMPTY_LIST;
+	}
+
+	public Collection<Variable> allVariables() {
+		return localVars;		
+	}
+	
+	public Signature<FunctionType> callSignature() {
+		return signature;
+	}
+
+	public Iterator<Operation> iterator() {
+		return ops.iterator();
+	}
+
+	
+	private int _labelID = 0;
+	public Label getUniqueLabel() {
+		return new Label("Label" + _labelID++);		
+	}
+
+	public String absolutePath() {		
+		return slink.absolutePath() + "/" + name();
+	}
+
+	public String name() {
+		return this.signature.name;
+	}
+
+	public StaticContainer container() {
+		return slink;
+	}
+	
 }

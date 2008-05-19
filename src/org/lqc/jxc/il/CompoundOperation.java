@@ -15,8 +15,8 @@ public class CompoundOperation
 	/** Operations. */
 	protected List<Operation> operations;
 	
-	public CompoundOperation(StaticContainer c) {
-		super(c);
+	public CompoundOperation(StaticContainer c, int line) {
+		super(c, line);
 		
 		operations = new Vector<Operation>();
 	}
@@ -26,8 +26,18 @@ public class CompoundOperation
 	}
 
 	public Iterator<Operation> iterator() {
-		return operations.iterator();
+		return operations.iterator();		
+	}
+	
+	public boolean isNop() {
+		boolean yes = true;
 		
+		for(Operation op : this) {
+			yes &= op.isNop();
+			if(!yes) return false;
+		}
+		
+		return true;
 	}
 
 }

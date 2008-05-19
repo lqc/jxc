@@ -29,6 +29,10 @@ public class Variable {
 		this.globalID = getNextID();
 	}
 	
+	public int localID() {
+		return this.localID;
+	}
+	
 	public Variable(StaticContainer container, 
 			long localId,
 			Signature<Type> sig)
