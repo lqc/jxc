@@ -2,16 +2,16 @@ package org.lqc.jxc.types;
 
 import org.lqc.util.Relation;
 
-public class PrimitiveType extends Type {
+public abstract class PrimitiveType extends Type {
 	
-	public static PrimitiveType INT = new PrimitiveType("int");
-	public static PrimitiveType REAL = new PrimitiveType("double");
-	public static PrimitiveType BOOLEAN = new PrimitiveType("boolean");
-	public static PrimitiveType STRING = new PrimitiveType("string");
+	public static PrimitiveType INT = new IntegerType("int");
+	public static PrimitiveType REAL = new RealType("double");
+	public static PrimitiveType BOOLEAN = new BooleanType("boolean");
+	public static PrimitiveType STRING = new StringType("string");
 		
 	private String name;
 	
-	private PrimitiveType(String name) {
+	protected PrimitiveType(String name) {
 		this.name = name;
 	}	
 	
@@ -31,17 +31,6 @@ public class PrimitiveType extends Type {
 	@Override
 	public String toString() {
 		return "p:"+ name;
-	}
-
-	public Relation compareTo(Type object) {
-		if(object instanceof AnyType)
-			return object.compareTo(this);
-		
-		//if(! (object instanceof PrimitiveType))
-		//	return Relation.NONCOMPARABLE;		
-		
-		return (this.equals(object) ? Relation.EQUAL : Relation.NONCOMPARABLE);
-	}
-	
+	}	
 	
 }

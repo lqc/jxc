@@ -34,13 +34,18 @@ public class Variable {
 	}
 	
 	public Variable(StaticContainer container, 
-			long localId,
+			int localID,
 			Signature<Type> sig)
 	{
 		this();
 		
 		slink = container;
 		signature = sig;
+		this.localID = localID;
+	}
+	
+	public Signature<Type> getSignature() {
+		return signature;
 	}
 			
 }

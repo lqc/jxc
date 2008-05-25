@@ -28,4 +28,8 @@ public class CondInstr extends Instruction {
 		return (cond ? trueBlock : falseBlock);
 	}
 
+	public void setCondition(Expression e) {
+		this.condition = e;		
+	}
+
 }

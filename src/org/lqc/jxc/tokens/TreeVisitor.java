@@ -21,4 +21,6 @@ public interface TreeVisitor{
 	public void visit(EmptyInstruction v);
 
 	public void visit(IncrementInstr incrementInstr);
+	
+	public void visit(TypeCast cast);
 }

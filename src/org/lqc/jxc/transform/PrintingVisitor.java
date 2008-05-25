@@ -18,6 +18,7 @@ import org.lqc.jxc.tokens.NullExpression;
 import org.lqc.jxc.tokens.CompileUnit;
 import org.lqc.jxc.tokens.ReturnInstr;
 import org.lqc.jxc.tokens.TreeVisitor;
+import org.lqc.jxc.tokens.TypeCast;
 import org.lqc.jxc.tokens.VarDecl;
 import org.lqc.jxc.tokens.VarExpr;
 
@@ -121,9 +122,12 @@ public class PrintingVisitor implements TreeVisitor {
 
 	public void visit(IncrementInstr instr) {
 		this.output.printf("[INSTR] '%s' += %d\n", 
-				instr.getId(), instr.getChange() );
-		
-		
+				instr.getId(), instr.getChange() );		
+	}
+
+	public void visit(TypeCast cast) {
+		this.output.printf("[CAST] from '%s' to '%s'\n",
+				cast.srcType(), cast.dstType() );
 		
 	}
 

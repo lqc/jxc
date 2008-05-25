@@ -23,5 +23,5 @@ public interface StaticContainer {
 	public Label getUniqueLabel();
 	
 	public String absolutePath();
-	public String name();
+	public String name();	
 }

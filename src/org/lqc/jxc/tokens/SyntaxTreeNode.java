@@ -12,7 +12,7 @@ public abstract class SyntaxTreeNode {
 
 	protected SyntaxTreeNode(int line, int column) {
 		this.staticContext = null;	
-		this.line = line;
+		this.line = line; 
 		this.column = column;
 	}
 	

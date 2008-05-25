@@ -1,22 +1,22 @@
 package org.lqc.jxc.tokens;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 
-import org.lqc.jxc.Lexem;
 import org.lqc.jxc.types.Type;
 
 public class FunctionCall extends Expression {
 	
 	private String fid;
-	private List<Expression> args;		
+	private ArrayList<Expression> args;		
 	private FunctionDecl ref;	
 	
 	public FunctionCall(int l, int c, String fid, List<Expression> args) {
 		super(l, c, Type.ANY);
 		
 		this.fid = fid;		
-		this.args = args;	
+		this.args = new ArrayList<Expression>(args);	
 		
 		this.ref = null;
 	}
@@ -41,7 +41,7 @@ public class FunctionCall extends Expression {
 	/**
 	 * @return the args
 	 */
-	public List<Expression> getArgs() {
+	public ArrayList<Expression> getArgs() {
 		return args;
 	}
 	

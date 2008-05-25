@@ -48,12 +48,17 @@ public class DAGraph<K extends PartiallyOrdered<? super K> , V> implements POSet
 		root = new Node();
 	}
 
-	public boolean contains(K key) {
-		return (this.find(root, key) != null);
+	public boolean contains(K key)		
+	{
+		try {
+			return (this.find(root, key) != null);
+		} catch (MultiplyMatchException e) {
+			return false;
+		}
 	}
 
 	public V find(K key) 
-		throws ElementNotFoundException 
+		throws ElementNotFoundException, MultiplyMatchException
 	{
 		Node ret = null;
 		
@@ -72,16 +77,26 @@ public class DAGraph<K extends PartiallyOrdered<? super K> , V> implements POSet
 	}
 	
 	private Node find(Node root, K key) 
+		throws MultiplyMatchException
 	{		
-		switch(key.compareTo(root.key)) {			
+		switch(key.compareTo(root.key)) {			 
 			case EQUAL:
 				return root;
 			case LESSER:
+				Vector<Node> matches = new Vector<Node>();
 				for(Node n : root.children) {
 					Node x = this.find(n, key);
-					if(x != null) return x;
+					if(x != null) 
+						matches.add(x);
 				}
-				return null;
+				switch(matches.size()) {
+					case 1:
+						return matches.firstElement();
+					case 0:
+						return root;
+					default:
+						throw new MultiplyMatchException(matches);
+				}
 			default:
 				return null;				
 		}		

@@ -1,14 +1,14 @@
 package org.lqc.jxc.tokens;
 
 
-public class AssignmentInstr extends Instruction {
+public class AssignmentInstr extends Expression {
 	
 	private String id;
 	private Expression value;
 	private VarDecl ref;
 	
 	public AssignmentInstr(int l, int c, String id, Expression e) {
-		super(l, c);
+		super(l, c, e.valueType);
 		this.id = id;
 		this.value = e;		
 	}
@@ -44,6 +44,10 @@ public class AssignmentInstr extends Instruction {
 	 */
 	public void setRef(VarDecl ref) {
 		this.ref = ref;
+	}
+
+	public void setValue(Expression e) {
+		this.value = e;		
 	}
 
 }

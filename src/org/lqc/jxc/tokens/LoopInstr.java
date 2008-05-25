@@ -50,4 +50,8 @@ public class LoopInstr extends Instruction {
 		return post;
 	}
 
+	public void setCondition(Expression e) {
+		this.condition = e;		
+	}
+
 }

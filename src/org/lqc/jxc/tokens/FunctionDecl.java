@@ -1,5 +1,6 @@
 package org.lqc.jxc.tokens;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 
@@ -10,7 +11,7 @@ import org.lqc.jxc.types.Type;
 public class FunctionDecl extends Declaration	
 {	
 	protected Instruction body;
-	protected List<ArgumentDecl> args;
+	protected ArrayList<ArgumentDecl> args;
 	
 	/** Table of local variables. This is filled in
 	 * during scope analysis. 
@@ -19,7 +20,7 @@ public class FunctionDecl extends Declaration
 	
 	public FunctionDecl(int l, int c, String fid, FunctionType t) {
 		super(l, c, t, fid);
-		this.args = new Vector<ArgumentDecl>();
+		this.args = new ArrayList<ArgumentDecl>();
 		
 		int i = 0;
 		for(Type at : t.getArgumentTypes())
@@ -30,7 +31,7 @@ public class FunctionDecl extends Declaration
 	
 	public FunctionDecl(int l, int c, String fid, Type rt, List<ArgumentDecl> args, Instruction b) {
 		super(l, c, new FunctionType(rt, listToArray(args)), fid);
-		this.args = new Vector<ArgumentDecl>();
+		this.args = new ArrayList<ArgumentDecl>();
 		this.args.addAll(args);		
 		body = b;		
 	}	

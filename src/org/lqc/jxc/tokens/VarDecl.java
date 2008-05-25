@@ -31,6 +31,10 @@ public class VarDecl extends Declaration {
 	public Expression getInitialValue() {
 		return initialValue;
 	}
+
+	public void setInitialValue(Expression e) {
+		this.initialValue = e;		
+	}
 	
 	
 }

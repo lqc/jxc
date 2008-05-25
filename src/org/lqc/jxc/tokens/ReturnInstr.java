@@ -20,4 +20,8 @@ public class ReturnInstr extends Instruction {
 		return value;
 	}
 
+	public void setValue(Expression e) {
+		this.value = e;		
+	}
+
 }

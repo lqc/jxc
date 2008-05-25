@@ -1,17 +1,9 @@
 package org.lqc.jxc.transform;
 
-import static org.lqc.jxc.types.PrimitiveType.BOOLEAN;
-import static org.lqc.jxc.types.PrimitiveType.INT;
-import static org.lqc.jxc.types.PrimitiveType.REAL;
-import static org.lqc.jxc.types.PrimitiveType.STRING;
-import static org.lqc.jxc.types.Type.VOID;
-
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.lqc.jxc.CompilerException;
-import org.lqc.jxc.tokens.BuiltinDecl;
 import org.lqc.jxc.tokens.Declaration;
 import org.lqc.jxc.tokens.FunctionDecl;
 import org.lqc.jxc.tokens.VarDecl;
@@ -19,6 +11,7 @@ import org.lqc.jxc.types.FunctionType;
 import org.lqc.jxc.types.Type;
 import org.lqc.util.DAGraph;
 import org.lqc.util.ElementNotFoundException;
+import org.lqc.util.MultiplyMatchException;
 import org.lqc.util.NonUniqueElementException;
 import org.lqc.util.POSet;
 import org.lqc.util.Tuple;
@@ -40,7 +33,7 @@ public class Context {
 	}
 
 	public FunctionDecl getFunction(String id, FunctionType t)
-			throws ElementNotFoundException 
+			throws ElementNotFoundException, MultiplyMatchException
 	{
 		POSet<Tuple<Type>, FunctionDecl> set = fmap.get(id);
 		try {

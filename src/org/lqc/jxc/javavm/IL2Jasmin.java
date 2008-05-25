@@ -19,16 +19,24 @@ import org.lqc.jxc.il.Nop;
 import org.lqc.jxc.il.Operation;
 import org.lqc.jxc.il.Return;
 import org.lqc.jxc.il.ReturnVoid;
+import org.lqc.jxc.il.TypeConversion;
 import org.lqc.jxc.il.VariableValue;
 import org.lqc.jxc.types.Type;
 
+/**
+ * TODO: optimize increment 
+ * TODO: Fix line debug information
+ * 
+ */
 public class IL2Jasmin {
 	
 	private PrintStream out;
+	private int lastLnum;
 	
 	public IL2Jasmin(PrintStream out) {
 		/* do some init */	
 		this.out = out;
+		lastLnum = -1000;
 	}	 
 	
 	public void emmit(Module m) {
@@ -69,14 +77,23 @@ public class IL2Jasmin {
 	public void emmit(Function f) {
 		out.printf(".method public static %s\n", 
 				JType.methodSignature(f.callSignature()) );
-		out.printf(".limit locals %d\n", f.allVariables().size());
+		
+		/* locals can have diffrent size */				
+		int k = f.newLVMap();		
+		
+		out.printf(".limit locals %d\n", k);
 		out.printf(".limit stack %d\n", calculateMaxStack(f) );
 		for(Operation op : f) 
-			this.emmit(op);
+			this.emmit(op, 0);
 		out.printf(".end method\n\n");		
 	}
 	
-	public void emmit(Operation op) {
+	public void emmit(Operation op, int depth) {
+		
+		if(lastLnum != op.line) {
+			out.printf(".line %d\n", op.line);
+			lastLnum = op.line;
+		}
 		
 		/* Expressions */	
 		if(op instanceof Constant) {
@@ -91,18 +108,33 @@ public class IL2Jasmin {
 			VariableValue v = (VariableValue)op;
 			JType jt = JType.fromILType(v.getType());
 			
-			out.printf("%s_%d\n", jt.loadVar(), 
-					v.reference().localID());
+			if(v.slink() instanceof Function) {
+				Function f = (Function)v.slink();
+				int i = f.getLVMap()[v.reference().localID()];
+				out.printf("%s\n", jt.loadVar(i));
+			}
+			else {
+				throw new CompilerException("Non-local variables not supported yet.");
+			}
 			return;
 		}
 		
 		if(op instanceof Assignment) {
 			Assignment a = (Assignment)op;
 			
-			this.emmit(a.getArgument());
+			this.emmit(a.getArgument(), depth + 1);
 			JType jt = JType.fromILType(a.getType());
-			out.printf("%s_%d\n", jt.storeVar(), 
-					a.getTarget().localID());
+			
+			if(a.slink() instanceof Function) {
+				Function f = (Function)a.slink();
+				int i = f.getLVMap()[a.getTarget().localID()];
+				if(depth > 0) out.print("dup\n");
+				out.printf("%s\n", jt.storeVar(i)); 
+			}
+			else {
+				throw new CompilerException("Non-local variables not supported yet.");
+			}
+					
 			return;			
 		}
 		
@@ -110,11 +142,11 @@ public class IL2Jasmin {
 			Call c = (Call)op;
 						
 			for(Expression e : c.args()) {
-				this.emmit(e);
+				this.emmit(e, depth + 1);
 			}
 						
 			if(c.target() instanceof Builtin) {					
-				out.println(((Builtin)c.target()).getContents());
+				out.printf("%s\n", ((Builtin)c.target()).getContents());
 			}
 			else {
 				out.printf("invokestatic %s/%s\n",
@@ -123,8 +155,23 @@ public class IL2Jasmin {
 			}	
 			return;
 		}
-						
-		out.printf(".line %d\n", op.line);
+		
+		if(op instanceof TypeConversion) {
+			TypeConversion cast = (TypeConversion)op;
+			JType st = JType.fromILType(cast.srcType());
+			JType dt = JType.fromILType(cast.dstType());
+			
+			this.emmit( cast.getInnerExpr(), depth + 1 );
+			
+			if(st.equals(JType.INTEGER) && dt.equals(JType.DOUBLE)) 
+				out.print("i2d\n");				
+			else if(st.equals(JType.DOUBLE) && dt.equals(JType.INTEGER)) 
+				out.print("d2i\n");
+			else {
+				/* TODO: JVM CAST HERE */
+			}
+			return;
+		}		
 				
 		if(op instanceof ReturnVoid) {
 			out.print("return\n");
@@ -135,16 +182,16 @@ public class IL2Jasmin {
 			Return r = (Return)op;
 			/* calculate expression */
 			Expression e = r.returnValue;
-			this.emmit(r.returnValue);
+			this.emmit(r.returnValue, depth + 1);
 			
 			/* return */
 			JType jt = JType.fromILType(e.getType());
-			out.println(jt.returnOp());
+			out.printf("%s\n", jt.returnOp());
 			return;						
 		}	
 		
 		if(op instanceof Nop) {
-			out.println("nop");
+			out.print("nop\n");
 			return;
 		}
 		
@@ -159,8 +206,9 @@ public class IL2Jasmin {
 				
 				this.emmitCondition(cond, trueLabel, falseLabel);
 				out.printf(trueLabel.emmit());
-				this.emmit(branch.getOperationA());
-				out.printf(falseLabel.emmit());				
+				this.emmit(branch.getOperationA(), 0);
+				out.printf(falseLabel.emmit());	
+				out.printf("nop\n");
 			}
 			else {
 				Label trueLabel = branch.slink().getUniqueLabel();
@@ -169,11 +217,12 @@ public class IL2Jasmin {
 				
 				this.emmitCondition(cond, trueLabel, falseLabel);
 				trueLabel.emmit();				
-				this.emmit(branch.getOperationA());
+				this.emmit(branch.getOperationA(), 0);
 				out.printf("goto %s\n", endLabel.getName());
 				out.printf(falseLabel.emmit());
-				this.emmit(branch.getOperationB());
-				out.printf(endLabel.emmit());				
+				this.emmit(branch.getOperationB(), 0);
+				out.printf(endLabel.emmit());	
+				out.printf("nop\n");
 			}
 			return;			
 		}
@@ -192,14 +241,16 @@ public class IL2Jasmin {
 			this.emmitCondition(loop.getCondition(), 
 					trueLabel, falseLabel);
 			out.printf(trueLabel.emmit());			
-			this.emmit(loop.getBodyBlock());			
+			this.emmit(loop.getBodyBlock(), 0);			
 			out.printf("goto %s\n", checkLabel.getName());
-			out.printf(falseLabel.emmit());			
+			out.printf(falseLabel.emmit());		
+			out.printf("nop\n");
 			return;
 		}
 				
 		if(op instanceof CompoundOperation) {
-			for(Operation opx : (CompoundOperation)op) this.emmit(opx);
+			for(Operation opx : (CompoundOperation)op) 
+				this.emmit(opx, depth);
 			return;
 		}
 		
@@ -217,8 +268,8 @@ public class IL2Jasmin {
 		}
 		
 		if(cond instanceof VariableValue) {
-			this.emmit(cond);
-			out.printf("ifne %s\n", f.getName());
+			this.emmit(cond, 1);
+			out.printf("ifeq %s\n", f.getName());
 			return;
 		}
 		
@@ -227,13 +278,13 @@ public class IL2Jasmin {
 			
 			if(! (c.target() instanceof Builtin))
 			{
-				this.emmit(cond);
-				out.printf("ifne %s\n", f.getName());
+				this.emmit(cond, 1);
+				out.printf("ifeq %s\n", f.getName());
 			}
 			else {
 				/* builtin */
 				for(Expression e : c.args()) {
-					this.emmit(e);
+					this.emmit(e, 1);
 				}
 				
 				out.printf(((Builtin)c.target()).getBranchTemplate()
@@ -242,7 +293,15 @@ public class IL2Jasmin {
 			return;
 		}		
 		
-		throw new CompilerException("Not implemented yet: " + cond);
+		if(cond instanceof Assignment) {
+			Assignment a = (Assignment)cond;
+			this.emmit(a, 1);
+			out.printf("ifeq %s\n", f.getName());				
+			
+			return;
+		}
+		
+		throw new CompilerException("Condition not implemented yet: " + cond);
 	}
 	
 	private static int calculateMaxStack(Function f) 
@@ -290,6 +349,15 @@ public class IL2Jasmin {
 			return JType.sizeof( ((VariableValue)op).getType() );			
 		}
 		
+		if(op instanceof TypeConversion) {
+			TypeConversion cast = (TypeConversion)op;
+			
+			return Math.max(
+					JType.sizeof(cast.srcType()), 
+					JType.sizeof(cast.dstType())
+			);
+		}
+		
 		if(op instanceof Call) {
 			Call c = (Call)op;
 			
@@ -314,15 +382,16 @@ public class IL2Jasmin {
 				s += k;
 			}	
 			
-			return m;
+			return m+1; /* XXX: fix this ugly hack */ 
 		}	
 		
 		if(op instanceof Assignment) {
 			Assignment assign = (Assignment)op;
 			int n = calculateMaxStack(assign.getArgument());
+			int k = JType.sizeof(assign.getType());
 			
 			/* we also might need an address */
-			return n + 1;			
+			return n + k + 1;			
 		}
 		
 		/* complex operations */

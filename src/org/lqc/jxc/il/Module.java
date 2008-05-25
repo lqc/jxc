@@ -52,29 +52,9 @@ public class Module implements StaticContainer {
 			JVMPrimitive pa = m.getAnnotation(JVMPrimitive.class);
 			JVMBranch ba = m.getAnnotation(JVMBranch.class);
 						
-			if(pa == null && ba != null) {
-				Label l1 = this.getUniqueLabel();				
-				Label l2 = this.getUniqueLabel();
-				StringBuffer inline = new StringBuffer();
-				inline.append(String.format(ba.value(), l1.getName()));
-				inline.append('\n');
-				inline.append("iconst_0\n");
-				inline.append("goto ");
-				inline.append(l2.getName());
-				inline.append('\n');
-				inline.append(l1.emmit());
-				inline.append('\n');
-				inline.append("iconst_0\n");
-				inline.append(l2.emmit());
-				inline.append('\n');
-				
-				this.fmap.put(fsig, new Builtin(fsig, inline.toString(), 
-						ba.value()) );
-				continue;							
-			}
-			
 			if(pa != null) {
-				String bt = "";
+				String bt = pa.value() + "\nifeq %s";
+				
 				if(ba != null)
 					bt = ba.value();
 				
@@ -171,8 +151,7 @@ public class Module implements StaticContainer {
 	public String name() {
 		return this.moduleName;
 	}
-	
-	
+		
 	private static class NullContainer implements StaticContainer {
 		public Function get(Signature<FunctionType> t) {				
 			return null;

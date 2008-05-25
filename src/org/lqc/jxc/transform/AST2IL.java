@@ -9,7 +9,6 @@ import java.util.Stack;
 import org.lqc.jxc.CompilerException;
 import org.lqc.jxc.il.Assignment;
 import org.lqc.jxc.il.Branch;
-import org.lqc.jxc.il.Builtin;
 import org.lqc.jxc.il.Call;
 import org.lqc.jxc.il.Callable;
 import org.lqc.jxc.il.CompoundOperation;
@@ -27,7 +26,6 @@ import org.lqc.jxc.il.Variable;
 import org.lqc.jxc.il.VariableValue;
 import org.lqc.jxc.tokens.ArgumentDecl;
 import org.lqc.jxc.tokens.AssignmentInstr;
-import org.lqc.jxc.tokens.BuiltinDecl;
 import org.lqc.jxc.tokens.CompileUnit;
 import org.lqc.jxc.tokens.ComplexInstr;
 import org.lqc.jxc.tokens.CondInstr;
@@ -44,6 +42,7 @@ import org.lqc.jxc.tokens.LoopInstr;
 import org.lqc.jxc.tokens.NullExpression;
 import org.lqc.jxc.tokens.ReturnInstr;
 import org.lqc.jxc.tokens.TreeVisitor;
+import org.lqc.jxc.tokens.TypeCast;
 import org.lqc.jxc.tokens.VarDecl;
 import org.lqc.jxc.tokens.VarExpr;
 import org.lqc.jxc.types.FunctionType;
@@ -118,6 +117,20 @@ public class AST2IL implements TreeVisitor {
 		return	new Signature<FunctionType>(
 				f.getID(), f.getType());		
 	}
+		
+	private void pickupExpr() {
+		if(hasExpr()) {			 
+			Operation op = this.popExpr();
+	
+			/* more then 1 expression should yield an error */
+			if(hasExpr()) {
+				throw new CompilerException(
+						"[INTERNAL] Unmatched expression left on operand stack.");
+			}
+			
+			appendOp(op);			
+		} 			
+	}
 	
 	public static Module convert(CompileUnit f) {		
 		AST2IL cv = new AST2IL();
@@ -151,13 +164,15 @@ public class AST2IL implements TreeVisitor {
 				new Signature[fd.getArgs().size()];
 			
 			int i = 0;
+			/*
 			for(ArgumentDecl ad : fd.getArgs()) {
 				args[i] = new Signature<Type>(
 						ad.getID(), ad.getType());
 				i++;
 			}
+			*/
 			
-			Callable f = container().newFunc(sig, args);
+			Callable f = container().newFunc(sig);
 			fmap.put(fd, f);			
 		}
 		
@@ -165,10 +180,6 @@ public class AST2IL implements TreeVisitor {
 		{		
 			fd.visitNode(this);
 		}
-	}
-
-	public void visit(ArgumentDecl decl) {
-		this.visit((VarDecl)decl);
 	}
 
 	public void visit(FunctionDecl fd) {		
@@ -221,6 +232,16 @@ public class AST2IL implements TreeVisitor {
 			appendOp( new Nop(container(), decl.getLine()) );
 		}
 	}
+	
+	public void visit(ArgumentDecl decl) {
+		Signature<Type> sig = new Signature<Type>(
+				decl.getID(), decl.getType());
+				
+		Variable v = ((Function)container()).newArg(sig);
+		
+		/* add a maping to global symbol table */
+		vmap.put(decl, v);		
+	}
 
 	public void visit(FunctionCall call) {
 		FunctionDecl fd = call.getRef();
@@ -256,18 +277,8 @@ public class AST2IL implements TreeVisitor {
 	public void visit(ComplexInstr ci) {
 		for(Instruction i : ci)
 		{			
-			i.visitNode(this);
-			
-			if(hasExpr()) {
-				/* TODO only some expression are statements */ 
-				appendOp(this.popExpr());
-		
-				/* more then 1 expression should yield an error */
-				if(hasExpr()) {
-					throw new CompilerException(
-							"[INTERNAL] Unmatched expression left on operand stack.");
-				}				
-			} 
+			i.visitNode(this);			
+			pickupExpr();			
 		}					
 	}
 
@@ -277,14 +288,11 @@ public class AST2IL implements TreeVisitor {
 		as.getValue().visitNode(this);		
 		org.lqc.jxc.il.Expression e = popExpr();
 			
-		appendOp( new Assignment(container(), as.getLine(), v, e));
+		pushExpr( new Assignment(container(), as.getLine(), v, e));
 	}
 	
 	public void visit(IncrementInstr i) {
-		Variable v = vmap.get(i.getRef());
-		
-		
-				
+		i.getAction().visitNode(this);				
 	}
 
 	public void visit(LoopInstr loop) {
@@ -304,6 +312,8 @@ public class AST2IL implements TreeVisitor {
 		
 		loop.getBody().visitNode(this);
 		loop.getPostInstr().visitNode(this);
+		
+		pickupExpr();
 		
 		while(moreOps())
 			body.append(nextOp());		
@@ -336,25 +346,33 @@ public class AST2IL implements TreeVisitor {
 		
 		/* create a fictional frame */
 		xstack.push( new Frame(container()));		
+		
 		/* transform "true" branch */
 		cond.getBranch(true).visitNode(this);		
+		pickupExpr();
 		
 		branchA = new CompoundOperation(container(), 
-				cond.getBranch(true).getLine());		
+				cond.getBranch(true).getLine());
+		/* add all ops */
 		while(moreOps())
-			branchA.append(nextOp());			
+			branchA.append(nextOp());
+		
+		
 		xstack.pop();
 		
 		/* same for second branch */
 		xstack.push( new Frame(container()));		
 		/* transform "true" branch */
-		cond.getBranch(false).visitNode(this);		
+		cond.getBranch(false).visitNode(this);
+		pickupExpr();
 		
 		branchB = new CompoundOperation(container(), 
 				cond.getBranch(false).getLine());
 		
+		/* add all ops */
 		while(moreOps())
-			branchB.append(nextOp());		
+			branchB.append(nextOp());
+		
 		xstack.pop();
 		
 		appendOp( new Branch(container(), cond.getLine(), 
@@ -367,6 +385,15 @@ public class AST2IL implements TreeVisitor {
 
 	public void visit(EmptyInstruction v) {
 		appendOp(new Nop(container(), v.getLine()));
+	}
+
+	public void visit(TypeCast cast) {
+		cast.getExpression().visitNode(this);		
+		org.lqc.jxc.il.Expression e = popExpr();
+		
+		pushExpr( new org.lqc.jxc.il.TypeConversion(
+			container(), cast.getLine(), e, cast.dstType()) );
+		
 	}
 
 	

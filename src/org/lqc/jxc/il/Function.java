@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
+import org.lqc.jxc.javavm.JType;
 import org.lqc.jxc.types.FunctionType;
 import org.lqc.jxc.types.Type;
 
@@ -22,6 +23,9 @@ public class Function implements StaticContainer, Callable,
 		
 	/** List of local variables. */
 	protected ArrayList<Variable> localVars;
+	
+	/** localID to address map. */
+	protected int[] lvmap;
 	
 	/** Variable mapping. */
 	protected Map<Signature<Type>, Integer> vmap;
@@ -41,7 +45,7 @@ public class Function implements StaticContainer, Callable,
 	private int genLUID() {
 		return ++_lastID;
 	}
-		
+					
 	public Function(StaticContainer container, 
 			Signature<FunctionType> sig,
 			Signature<Type>... args)
@@ -53,15 +57,26 @@ public class Function implements StaticContainer, Callable,
 		amap = new HashMap<Signature<Type>, Integer>();
 		
 		localVars = new ArrayList<Variable>();		
-				 
+		
+		/*		
 		for(Signature<Type> s : args) {
 			Variable v = new Variable(this, genLUID(), s);
 			
 			localVars.add(v.localID, v);
 			amap.put(s, v.localID);
-		}		
+		}
+		*/ 
 		
 		ops = new Vector<Operation>();
+	}
+	
+	public Variable newArg(Signature<Type> signature) {
+		Variable v = new Variable(this, genLUID(), signature);
+		
+		localVars.add(v.localID, v);
+		amap.put(signature, v.localID);
+		vmap.put(signature, v.localID);
+		return v;
 	}
 	
 	public Variable newVar(Signature<Type> signature) {
@@ -128,4 +143,20 @@ public class Function implements StaticContainer, Callable,
 		return slink;
 	}
 	
+	public int[] getLVMap() {
+		return lvmap;
+	}
+	public int newLVMap() {
+		lvmap = new int[localVars.size()];
+		int k = 0;
+		int i = 0;
+		
+		for(Variable v : localVars) {
+			lvmap[i] = k;
+			i++;
+			k += JType.sizeof(v.getSignature().type);
+		}	
+		
+		return k;
+	}	
 }

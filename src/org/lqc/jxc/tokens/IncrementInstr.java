@@ -1,14 +1,16 @@
 package org.lqc.jxc.tokens;
 
-public class IncrementInstr extends Instruction {
+import org.lqc.jxc.types.Type;
+
+public class IncrementInstr extends Expression {
 	
 	private String id;	
 	private VarDecl ref;
 	private int dv;	
-	private FunctionDecl action;
+	private Instruction action;
 	
 	public IncrementInstr(int l, int c, String id, int dv) {
-		super(l, c);
+		super(l, c, Type.ANY);
 		this.id = id;
 		this.dv = dv;		
 	}
@@ -46,14 +48,14 @@ public class IncrementInstr extends Instruction {
 	/**
 	 * @return the action
 	 */
-	public FunctionDecl getAction() {
+	public Instruction getAction() {
 		return action;
 	}
 
 	/**
 	 * @param action the action to set
 	 */
-	public void setAction(FunctionDecl action) {
+	public void setAction(Instruction action) {
 		this.action = action;
 	}
 

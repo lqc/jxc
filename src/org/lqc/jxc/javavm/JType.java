@@ -102,13 +102,19 @@ public class JType {
 		return prefix+"return";
 	}
 	
-	public String loadVar() {
-		return prefix + "load";
+	public String loadVar(int num) {
+		if(num < 3)
+			return prefix + "load_" + num;
+		else
+			return prefix + "load " + num;
 	}
 	
-	public String storeVar() {
-		return prefix + "store";
-	}
+	public String storeVar(int num) {
+		if(num < 3)
+			return prefix + "store_" + num;
+		else
+			return prefix + "store " + num;
+	}	
 	
 	public String prefix() {
 		return prefix;

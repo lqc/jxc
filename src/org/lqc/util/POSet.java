@@ -19,7 +19,7 @@ public interface POSet<K extends PartiallyOrdered<? super K>, V>
 	public boolean contains(K key);	
 	
 	public V find(K key)
-		throws ElementNotFoundException;
+		throws ElementNotFoundException, MultiplyMatchException;
 	
 	public V remove(K key);
 	

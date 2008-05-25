@@ -68,7 +68,7 @@ non terminal ArgumentDecl arg_decl;
 non terminal List<Instruction> instr_list;
 non terminal Instruction instr;
 non terminal ComplexInstr complex_instr;
-non terminal Instruction assign_instr;
+
 
 non terminal List<Declaration> var_decl;
 non terminal List<Pair<String,Expression>> declarator_list;
@@ -77,6 +77,9 @@ non terminal Pair<String,Expression> declarator;
 non terminal Expression expr;
 non terminal Expression bool_expr_or, bool_expr_and, bool_expr_cmp, bool_expr_rel; 
 non terminal Expression num_expr_add, num_expr_mul, unary_expr, simple_expr;
+non terminal Expression assign_expr;
+
+non terminal TypeCast type_cast;
 
 non terminal List<Expression> expr_list;
 
@@ -134,15 +137,15 @@ instr_list ::= instr:i {:
 ;
 
 instr ::= complex_instr:ci {: RESULT = ci; :} |		  
-		  expr:e SEMI {: RESULT = e; :} |
-		  assign_instr:i SEMI {: RESULT = i; :} |
+		  expr:e SEMI {: RESULT = e; :} |		  
 		  cond_instr:i {: RESULT = i; :} | 
 		  loop_instr:i {: RESULT = i; :} |
-		  return_instr:i {: RESULT = i; :}  
+		  return_instr:i {: RESULT = i; :} |
+		  SEMI {: RESULT =  new EmptyInstruction(); :}  
 ;
 
 
-assign_instr ::= ID:id EQUAL:op expr:e {: 
+assign_expr ::= ID:id EQUAL:op expr:e {: 
 					RESULT = new AssignmentInstr(opleft, opright, id, e); :} |
 				 ID:id PLUSPLUS:op {:
 				 	RESULT = new IncrementInstr(opleft, opright, id, 1); :} |
@@ -158,7 +161,7 @@ cond_instr ::= IF:op LPAR expr:e RPAR instr:i {:
 
 loop_instr ::= WHILE:op LPAR expr:e RPAR instr:i {:
 				  RESULT = new LoopInstr(opleft, opright, e, i, Instruction.EMPTY, Instruction.EMPTY); :} |
-			  FOR:op LPAR assign_instr:init SEMI expr:e SEMI assign_instr:post RPAR instr:body
+			  FOR:op LPAR assign_expr:init SEMI expr:e SEMI assign_expr:post RPAR instr:body
 			  {:
 			  	RESULT = new LoopInstr(opleft, opright, e, body, init, post); :}
 ;
@@ -199,7 +202,9 @@ declarator ::= ID:id {:
 ;
 
 /*** EXPRESSIONS ***/
-expr ::= bool_expr_or:e {: RESULT =e; :};
+expr ::= bool_expr_or:e {: RESULT =e; :} |
+		 assign_expr:e {: RESULT = e; :}		 
+;
 
 /** Boolean Expressions **/
 bool_expr_or ::= bool_expr_and:e {: RESULT = e; :} |
@@ -246,7 +251,7 @@ num_expr_mul ::= unary_expr:e {: RESULT = e; :} |
                       RESULT = new FunctionCall(opleft, opright,"_REM", e1, e2); :}
 ;
 
-unary_expr ::= simple_expr:e {: RESULT = e; :} |
+unary_expr ::= simple_expr:e {: RESULT = e; :} |			   
                NEG:op unary_expr:e {: 
                    RESULT = new FunctionCall(opleft, opright, "_LNEG", e); :} |  
                PLUS:op unary_expr:e {: 
@@ -260,9 +265,13 @@ simple_expr ::= ID:id {: RESULT = new VarExpr(idleft, idright, id); :} |
                 	RESULT = new FunctionCall(idleft, idright, id, elist); :} | 
                 ID:id LPAR RPAR {:
                      RESULT = new FunctionCall(idleft, idright, id); :} |
-                LPAR expr:e RPAR {: RESULT = e; :} |
-                constant:c {: RESULT = c; :} 
+                LPAR expr:e RPAR {: RESULT = e; :} |                
+                constant:c {: RESULT = c; :} |
+                type_cast:e {: RESULT = e; :}
 ;     
+
+type_cast ::= LPAR TYPE:t RPAR simple_expr:e {:
+					RESULT = new TypeCast(tleft, tright, e, t); :};
 
 expr_list ::= expr:e {: 
 				RESULT = new Vector<Expression>(); 

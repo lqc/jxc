@@ -1,10 +1,9 @@
 package org.lqc.jxc.tokens;
 
-import org.lqc.jxc.Lexem;
 
 public class EmptyInstruction extends Instruction {
 
-	protected EmptyInstruction() {
+	public EmptyInstruction() {
 		super(-1, -1);		
 	}
 
