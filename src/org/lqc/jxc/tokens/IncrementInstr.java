@@ -1,15 +1,16 @@
 package org.lqc.jxc.tokens;
 
 import org.lqc.jxc.types.Type;
+import org.lqc.util.PathID;
 
 public class IncrementInstr extends Expression {
 	
-	private String id;	
+	private PathID id;	
 	private VarDecl ref;
 	private int dv;	
 	private Instruction action;
 	
-	public IncrementInstr(int l, int c, String id, int dv) {
+	public IncrementInstr(int l, int c, PathID id, int dv) {
 		super(l, c, Type.ANY);
 		this.id = id;
 		this.dv = dv;		
@@ -27,7 +28,7 @@ public class IncrementInstr extends Expression {
 	/**
 	 * @return the id
 	 */
-	public String getId() {
+	public PathID getId() {
 		return id;
 	}
 

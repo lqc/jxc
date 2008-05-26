@@ -5,14 +5,23 @@ import java.util.List;
 import java.util.Vector;
 
 import org.lqc.jxc.types.Type;
+import org.lqc.util.PathID;
 
 public class FunctionCall extends Expression {
 	
-	private String fid;
+	private PathID fid;
 	private ArrayList<Expression> args;		
 	private FunctionDecl ref;	
 	
 	public FunctionCall(int l, int c, String fid, List<Expression> args) {
+		this(l, c, new PathID(fid), args);
+	}	
+	
+	public FunctionCall(int l, int c, String fid, Expression... args) {
+		this(l, c, new PathID(fid), args);
+	}
+	
+	public FunctionCall(int l, int c, PathID fid, List<Expression> args) {
 		super(l, c, Type.ANY);
 		
 		this.fid = fid;		
@@ -21,7 +30,7 @@ public class FunctionCall extends Expression {
 		this.ref = null;
 	}
 	
-	public FunctionCall(int l, int c, String fid, Expression... args) {
+	public FunctionCall(int l, int c, PathID fid, Expression... args) {
 		this(l, c, fid, new Vector<Expression>(args.length));
 		for(Expression e : args) { this.args.add(e); }		
 	}
@@ -34,7 +43,7 @@ public class FunctionCall extends Expression {
 	/**
 	 * @return the fid
 	 */
-	public String getFid() {
+	public PathID getFid() {
 		return fid;
 	}
 

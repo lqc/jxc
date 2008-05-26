@@ -4,9 +4,9 @@ import org.lqc.jxc.types.FunctionType;
 
 public class Builtin implements Callable {
 	
-	private Signature<FunctionType> signature;
-	private String contents;
-	private String branchTempl;
+	protected Signature<FunctionType> signature;
+	protected String contents;
+	protected String branchTempl;
 
 	public Builtin(Signature<FunctionType> sig, 
 			String contents, String branchTempl) {
@@ -26,7 +26,7 @@ public class Builtin implements Callable {
 	/**
 	 * @return the contents
 	 */
-	public String getContents() {
+	public String getContents(StaticContainer dl) {
 		return contents;
 	}
 

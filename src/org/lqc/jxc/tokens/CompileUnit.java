@@ -3,19 +3,20 @@ package org.lqc.jxc.tokens;
 import java.util.List;
 import java.util.Vector;
 
-import org.lqc.jxc.Lexem;
-
 public class CompileUnit extends SyntaxTreeNode {
-	
+
+	private List<FunctionDecl> functions;
+	private List<ImportStmt> imports;
 	private String name;
-	
-	public CompileUnit(int l, int c, String name, List<FunctionDecl> fl) {
+
+	public CompileUnit(int l, int c, String name, List<ImportStmt> importList,
+			List<FunctionDecl> funcList) {
 		super(l, c);
-		functions = new Vector<FunctionDecl>(fl);
+
+		functions = new Vector<FunctionDecl>(funcList);
+		imports = new Vector<ImportStmt>(importList);
 		this.name = name;
 	}
-	
-	private List<FunctionDecl> functions;
 
 	/**
 	 * @return the functions
@@ -23,20 +24,25 @@ public class CompileUnit extends SyntaxTreeNode {
 	public List<FunctionDecl> getFunctions() {
 		return functions;
 	}
-
-	@Override
-	public void visitNode(TreeVisitor v) {
-		v.visit(this);		
-	}
 	
+	public List<ImportStmt> getImports() {
+		return imports;
+	}
+
 	public String getName() {
 		return name;
 	}
 
 	/**
-	 * @param name the name to set
+	 * @param name
+	 *            the name to set
 	 */
 	public void setName(String name) {
 		this.name = name;
+	}
+
+	@Override
+	public void visitNode(TreeVisitor v) {
+		v.visit(this);
 	}
 }

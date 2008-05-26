@@ -2,8 +2,10 @@ package org.lqc.jxc.transform;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
+import org.lqc.jxc.CompilerException;
 import org.lqc.jxc.tokens.Declaration;
 import org.lqc.jxc.tokens.FunctionDecl;
 import org.lqc.jxc.tokens.VarDecl;
@@ -14,69 +16,72 @@ import org.lqc.util.ElementNotFoundException;
 import org.lqc.util.MultiplyMatchException;
 import org.lqc.util.NonUniqueElementException;
 import org.lqc.util.POSet;
+import org.lqc.util.PathID;
 import org.lqc.util.Tuple;
 
 public class Context {
 	
-	public final static String RETURN_ID = "<RETURN>"; 
+	public final static PathID RETURN_ID = new PathID("<RETURN>"); 
 
-	private HashMap<String, POSet<Tuple<Type>, FunctionDecl>> fmap;
-	private HashMap<String, VarDecl> vmap;
-	private Context parent;
-	private String name;
-
+	protected HashMap<String, POSet<Tuple<Type>, FunctionDecl>> fmap;
+	protected HashMap<String, VarDecl> vmap;
+	protected Context parent;
+	protected String name;	
+	
 	public Context(Context parent, String name) {
 		fmap = new HashMap<String, POSet<Tuple<Type>, FunctionDecl>>();
 		vmap = new HashMap<String, VarDecl>();
+				
 		this.parent = parent;
 		this.name = name;
 	}
 
-	public FunctionDecl getFunction(String id, FunctionType t)
+	public FunctionDecl getFunction(String n, FunctionType t)
 			throws ElementNotFoundException, MultiplyMatchException
 	{
-		POSet<Tuple<Type>, FunctionDecl> set = fmap.get(id);
+		POSet<Tuple<Type>, FunctionDecl> set = fmap.get(n);
 		try {
 			return set.find(t.getArgumentTypes());
 		} catch (ElementNotFoundException e) {
 			if (parent != null)
-				return parent.getFunction(id, t);
+				return parent.getFunction(n, t);
 			throw e;
 		} catch (NullPointerException e) {
 			if (parent != null)
-				return parent.getFunction(id, t);
+				return parent.getFunction(n, t);
 			throw new ElementNotFoundException();
 		}
 	}
 
-	public VarDecl getVariable(String id) throws ElementNotFoundException {
-		VarDecl var = vmap.get(id);
+	public VarDecl getVariable(String n) throws ElementNotFoundException {
+		VarDecl var = vmap.get(n);
 
 		if (var != null)
 			return var;
 
 		if (parent != null)
-			return parent.getVariable(id);
+			return parent.getVariable(n);
 
 		throw new ElementNotFoundException();
 	}
 
 	public void put(FunctionDecl d) throws NonUniqueElementException {
-		POSet<Tuple<Type>, FunctionDecl> set = fmap.get(d.getID());
+		POSet<Tuple<Type>, FunctionDecl> set =			
+			fmap.get(d.getLocalID());
 
 		if (set == null) {
 			set = new DAGraph<Tuple<Type>, FunctionDecl>();
-			fmap.put(d.getID(), set);
+			fmap.put(d.getLocalID(), set);
 		}
 
 		set.insert(d.getType().getArgumentTypes(), d);
 	}
 
 	public void put(VarDecl d) throws NonUniqueElementException {
-		if (vmap.containsKey(d.getID()))
+		if (vmap.containsKey(d.getLocalID()))
 			throw new NonUniqueElementException();
 
-		vmap.put(d.getID(), d);
+		vmap.put(d.getLocalID(), d);
 	}
 
 	public String toString() {
@@ -86,7 +91,7 @@ public class Context {
 		return this.name;
 	}
 	
-	public Set<FunctionDecl> getAllFunctionDecl() {
+	public Set<? extends FunctionDecl> getAllFunctionDecl() {
 		Set<FunctionDecl> v = new HashSet<FunctionDecl>();
 		
 		for(POSet<Tuple<Type>, FunctionDecl> poset : fmap.values()) {
@@ -110,5 +115,5 @@ public class Context {
 			v.add(d);
 				
 		return v;
-	}
+	}	
 }

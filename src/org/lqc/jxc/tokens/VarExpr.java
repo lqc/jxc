@@ -1,20 +1,20 @@
 package org.lqc.jxc.tokens;
 
-import org.lqc.jxc.Lexem;
 import org.lqc.jxc.types.Type;
+import org.lqc.util.PathID;
 
 public class VarExpr extends Expression {	
 	
-	private String id;
+	private PathID id;
 	private VarDecl ref;	
 	
-	public VarExpr(int l, int c, String id) {
+	public VarExpr(int l, int c, PathID id) {
 		super(l, c, Type.ANY);
 		this.id = id;	
 		this.ref = null;
 	}
 	
-	public String getId() { return id; }
+	public PathID getId() { return id; }
 	
 	
 	

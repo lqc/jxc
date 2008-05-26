@@ -24,8 +24,7 @@ import org.lqc.jxc.il.VariableValue;
 import org.lqc.jxc.types.Type;
 
 /**
- * TODO: optimize increment 
- * TODO: Fix line debug information
+ * TODO: optimize increment
  * 
  */
 public class IL2Jasmin {
@@ -44,7 +43,7 @@ public class IL2Jasmin {
 				
 		/* preface block */
 		out.printf(".class public %s\n", m.getModuleName());
-		out.printf(".super java/lang/Object\n\n");	
+		out.printf(".super lang/jx/Module\n\n");	
 				
 		/* main stub */
 		out.print("; Main stub\n");
@@ -76,15 +75,22 @@ public class IL2Jasmin {
 	
 	public void emmit(Function f) {
 		out.printf(".method public static %s\n", 
-				JType.methodSignature(f.callSignature()) );
+				JType.methodSignature(f.callSignature()) );		
 		
 		/* locals can have diffrent size */				
 		int k = f.newLVMap();		
-		
+				
 		out.printf(".limit locals %d\n", k);
 		out.printf(".limit stack %d\n", calculateMaxStack(f) );
+		
+		out.print(".annotation visible Lorg/lqc/jxc/javavm/FunctionAnnotation;\n");
+		out.printf("name s = \"%s\"\n", f.name());
+		out.printf("type s = \"%s\"\n", f.callSignature().type);
+		out.print(".end annotation\n");
+		
 		for(Operation op : f) 
 			this.emmit(op, 0);
+		
 		out.printf(".end method\n\n");		
 	}
 	
@@ -146,7 +152,7 @@ public class IL2Jasmin {
 			}
 						
 			if(c.target() instanceof Builtin) {					
-				out.printf("%s\n", ((Builtin)c.target()).getContents());
+				out.printf("%s\n", ((Builtin)c.target()).getContents(c.slink()));
 			}
 			else {
 				out.printf("invokestatic %s/%s\n",

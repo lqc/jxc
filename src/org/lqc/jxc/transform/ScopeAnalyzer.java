@@ -1,22 +1,30 @@
 package org.lqc.jxc.transform;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Stack;
+import java.util.Vector;
 
 import org.lqc.jxc.CompilerException;
+import org.lqc.jxc.Pair;
 import org.lqc.jxc.SyntaxErrorException;
 import org.lqc.jxc.TypeCheckException;
+import org.lqc.jxc.il.Module;
 import org.lqc.jxc.tokens.ArgumentDecl;
 import org.lqc.jxc.tokens.AssignmentInstr;
 import org.lqc.jxc.tokens.CompileUnit;
-import org.lqc.jxc.tokens.ComplexInstr;
 import org.lqc.jxc.tokens.CondInstr;
 import org.lqc.jxc.tokens.ConstantExpr;
 import org.lqc.jxc.tokens.EmptyInstruction;
 import org.lqc.jxc.tokens.Expression;
 import org.lqc.jxc.tokens.FunctionCall;
 import org.lqc.jxc.tokens.FunctionDecl;
+import org.lqc.jxc.tokens.ImportStmt;
 import org.lqc.jxc.tokens.IncrementInstr;
+import org.lqc.jxc.tokens.InstrBlock;
+import org.lqc.jxc.tokens.InstrList;
 import org.lqc.jxc.tokens.Instruction;
 import org.lqc.jxc.tokens.LoopInstr;
 import org.lqc.jxc.tokens.NullExpression;
@@ -31,6 +39,7 @@ import org.lqc.jxc.types.Type;
 import org.lqc.util.ElementNotFoundException;
 import org.lqc.util.MultiplyMatchException;
 import org.lqc.util.NonUniqueElementException;
+import org.lqc.util.PathID;
 import org.lqc.util.Relation;
 
 /**
@@ -46,7 +55,11 @@ import org.lqc.util.Relation;
 public class ScopeAnalyzer implements TreeVisitor {
 
 	private Stack<Context> envStack;
-	private Context current;
+	private Context current;	
+	
+	protected Map<String, ExternalContext> externals;
+	
+	private ClassLoader loader;
 
 	private void push(Context ctx) {
 		envStack.push(ctx);
@@ -58,6 +71,118 @@ public class ScopeAnalyzer implements TreeVisitor {
 		current = envStack.peek();
 	}
 
+	@SuppressWarnings("unchecked")
+	private ExternalContext loadModule(Context parent, PathID path) {
+		// load module		
+		try {
+			Class c = loader.loadClass(path.absoluteName());			
+			
+			ExternalContext x = 
+				new ExternalContext(parent, new Module(c) );
+			
+			if(externals.containsKey(x.name))
+				throw new CompilerException("Duplicate import" +
+						" of module '" + x.name +"'");
+			
+			externals.put(x.name, x);
+			
+			return x;			
+		} catch (ClassNotFoundException e) {
+			throw new CompilerException("Could not load module " + 
+					path.absoluteName() );
+		}	
+		
+	}
+	
+	private	FunctionDecl lookupCallable(PathID path, FunctionType t)
+		throws ElementNotFoundException, MultiplyMatchException
+	{
+		return this.lookupCallable(current, path, t);		
+	}
+	
+	private	FunctionDecl lookupCallable(
+			Context c, PathID path, FunctionType t)
+		throws ElementNotFoundException, MultiplyMatchException
+	{
+		// if the path is relative to context 
+		if(path.isRelative()) {
+			final String bn = path.basename();
+			try {
+				return c.getFunction(bn, t);
+			} catch(ElementNotFoundException e) {
+				/* look in externals */
+				List<FunctionDecl> dl = new Vector<FunctionDecl>();
+				for(Context x : externals.values())
+				{					
+					try {
+						dl.add(x.getFunction(bn, t));						
+					} catch(ElementNotFoundException ex) {
+						// ignore
+					}					
+				}
+				
+				if(dl.size() > 1)
+					throw new MultiplyMatchException(dl);
+				
+				if(dl.size() == 0)
+					throw new ElementNotFoundException();
+				
+				return dl.get(0);				
+			}
+		}
+		
+		// if not then lookup the context
+		Pair<PathID, String> p = path.tailSplit();
+		PathID xpath = new PathID(p.second());
+		
+		while(p.first() != null) {
+			Context x = lookupContext(c, p.first().absoluteName());
+			
+			if(x != null)
+				return lookupCallable(x, xpath, t);
+			
+			p = p.first().tailSplit();
+			xpath.prepend(p.second());
+		}
+		
+		throw new ElementNotFoundException();			
+	}
+	
+	private VarDecl lookupVariable(PathID path)
+		throws ElementNotFoundException
+	{
+		return this.lookupVariable(current, path);		
+	}
+	
+	private VarDecl lookupVariable(Context c, PathID path)
+		throws ElementNotFoundException
+	{				
+		// if the path is relative to context 
+		if(path.isRelative())
+			return c.getVariable(path.basename());
+		
+		// if not then lookup the context
+		Pair<PathID, String> p = path.tailSplit();
+		PathID xpath = new PathID(p.second());
+		
+		while(p.first() != null) {
+			Context x = lookupContext(c, p.first().absoluteName());
+			
+			if(x != null)
+				return lookupVariable(x, xpath);
+			
+			p = p.first().tailSplit();
+			xpath.prepend(p.second());
+		}
+		
+		throw new ElementNotFoundException();		
+	}
+	
+	private Context lookupContext(Context base, String name)		
+	{
+		return externals.get(name);		
+	}
+	
 	private <E extends Exception> Expression typeCheck(Expression e, Type b,
 			E ex) throws E {
 		if (!e.getType().equals(Type.ANY)) {
@@ -74,15 +199,27 @@ public class ScopeAnalyzer implements TreeVisitor {
 		}
 		return e;
 	}
+	
+	public Map<String, ExternalContext> externals() {
+		return this.externals;
+	}
 
-	public ScopeAnalyzer(Context topContext) {
+	public ScopeAnalyzer() {
 		envStack = new Stack<Context>();
-		push(topContext);
+		loader = ClassLoader.getSystemClassLoader();
+		externals = new HashMap<String,ExternalContext>();
+		
+		push(loadModule(null, new PathID("lang.jx.System")) );
 	}
 
 	public void visit(CompileUnit prog) {
 		prog.bindStaticContext(current);
 		Context ctx = new Context(current, "<global>");
+		
+		for(ImportStmt is : prog.getImports()) {
+			is.bindStaticContext(ctx);
+			is.visitNode(this);
+		}
 
 		for (FunctionDecl f : prog.getFunctions()) {
 			try {
@@ -106,7 +243,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 			current.put(decl);
 		} catch (NonUniqueElementException e) {
 			throw new SyntaxErrorException(decl, String.format(
-					"Function argument '%s' redeclaration\n", decl.getID()));
+					"Function argument '%s' redeclaration\n", decl.getLocalID()));
 		}
 	}
 
@@ -118,7 +255,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 
 		try {
 			current.put(new VarDecl(decl.getType().getReturnType(),
-					Context.RETURN_ID));
+					Context.RETURN_ID.basename()));
 		} catch (NonUniqueElementException e) {
 			throw new CompilerException(
 					"[INTERNAL] Return value reference already in scope. Impossible ?",
@@ -170,7 +307,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 						String
 								.format(
 										"Can't initialize variable '%s' of type '%s' with '%s' type expression",
-										decl.getID(), decl.getType(), e
+										decl.getLocalID(), decl.getType(), e
 												.getType())));
 
 		decl.setInitialValue(e);
@@ -179,7 +316,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 			current.put(decl);
 		} catch (NonUniqueElementException ex) {
 			throw new SyntaxErrorException(decl, "Multiply declaration of"
-					+ "variable: " + decl.getID());
+					+ "variable: " + decl.getLocalID());
 		}
 	}
 
@@ -196,7 +333,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 		FunctionType alpha = new FunctionType(Type.ANY, types);
 
 		try {
-			FunctionDecl d = current.getFunction(call.getFid(), alpha);
+			FunctionDecl d = lookupCallable(call.getFid(), alpha);
 			/* check for possible casts */
 			ArrayList<Expression> call_args = call.getArgs();
 			for (int j = 0; j < call_args.size(); j++) {
@@ -225,7 +362,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 
 	public void visit(VarExpr e) {
 		try {
-			VarDecl d = current.getVariable(e.getId());
+			VarDecl d = lookupVariable(e.getId());
 			e.bindRef(d);
 		} catch (ElementNotFoundException exc) {
 			throw new SyntaxErrorException(e, String
@@ -234,7 +371,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 		}
 	}
 
-	public void visit(ComplexInstr instr) {
+	public void visit(InstrBlock instr) {
 		push(new Context(current, "block"));
 
 		for (Instruction i : instr) {
@@ -244,10 +381,17 @@ public class ScopeAnalyzer implements TreeVisitor {
 
 		pop();
 	}
+	
+	public void visit(InstrList instrList) {
+		for(Instruction i : instrList) {
+			i.bindStaticContext(current);
+			i.visitNode(this);			
+		}		
+	}
 
 	public void visit(AssignmentInstr instr) {
 		try {
-			VarDecl d = current.getVariable(instr.getId());
+			VarDecl d = lookupVariable(instr.getId());
 			instr.setRef(d);
 
 			Expression e = instr.getValue();
@@ -272,7 +416,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 		VarDecl d;
 
 		try {
-			d = current.getVariable(instr.getId());
+			d = lookupVariable(instr.getId());
 			instr.setRef(d);
 		} catch (ElementNotFoundException e) {
 			throw new SyntaxErrorException(instr, String.format(
@@ -289,7 +433,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 				new Integer(instr.getChange()));
 		ce.visitNode(this);
 
-		VarExpr ve = new VarExpr(instr.getLine(), instr.getColumn(), d.getID());
+		VarExpr ve = new VarExpr(instr.getLine(), instr.getColumn(), d.getAbsoluteID());
 		ve.visitNode(this);
 
 		/*
@@ -304,7 +448,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 
 		FunctionType ft = null;
 		try {
-			fd = current.getFunction("_ADD", ft = new FunctionType(d.getType(),
+			fd = lookupCallable(new PathID("_ADD"), ft = new FunctionType(d.getType(),
 					d.getType(), PrimitiveType.INT));
 		} catch (ElementNotFoundException ex) {
 			throw new SyntaxErrorException(instr, String.format(
@@ -319,7 +463,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 
 		AssignmentInstr as;		
 		instr.setAction(as = new AssignmentInstr(instr.getLine(), instr
-				.getColumn(), d.getID(), fc));
+				.getColumn(), d.getAbsoluteID(), fc));
 		
 		as.visitNode(this);
 		
@@ -331,6 +475,10 @@ public class ScopeAnalyzer implements TreeVisitor {
 	}
 
 	public void visit(LoopInstr loop) {
+		
+		/* create local block */
+		push(new Context(current, "loop-block"));
+		
 		loop.getInitInstr().visitNode(this);
 		Expression e = loop.getCondition();
 
@@ -349,11 +497,13 @@ public class ScopeAnalyzer implements TreeVisitor {
 
 		loop.getBody().bindStaticContext(current);
 		loop.getBody().visitNode(this);
+		
+		pop();
 	}
 
 	public void visit(ReturnInstr ret) {
 		try {
-			VarDecl d = current.getVariable(Context.RETURN_ID);
+			VarDecl d = lookupVariable(Context.RETURN_ID);
 			ret.getValue().visitNode(this);
 
 			ret.setValue(typeCheck(ret.getValue(), d.getType(),
@@ -402,6 +552,12 @@ public class ScopeAnalyzer implements TreeVisitor {
 	public void visit(TypeCast cast) {
 		Expression e = cast.getExpression();
 		e.visitNode(this);
+	}
+
+	public void visit(ImportStmt importStmt) 
+	{		
+		// we assume module names are absolute		
+		loadModule(current, importStmt.getPath());		
 	}
 
 }

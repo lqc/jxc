@@ -71,7 +71,7 @@ public class FunctionDecl extends Declaration
 	}
 	
 	public void initInnerContext(Context parent) {
-		this.innerContext = new Context(parent, this.entityID);
+		this.innerContext = new Context(parent, this.entityID.basename());
 				
 	}
 	

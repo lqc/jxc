@@ -10,8 +10,7 @@ public interface TreeVisitor{
 	public void visit(FunctionCall call);
 	public void visit(ConstantExpr c);
 	public void visit(VarExpr var);
-	
-	public void visit(ComplexInstr instr);
+		
 	public void visit(AssignmentInstr instr);
 	public void visit(LoopInstr loop);
 	public void visit(ReturnInstr ret);
@@ -23,4 +22,9 @@ public interface TreeVisitor{
 	public void visit(IncrementInstr incrementInstr);
 	
 	public void visit(TypeCast cast);
+
+	public void visit(InstrBlock instr);
+	public void visit(InstrList instrList);
+
+	public void visit(ImportStmt importStmt);
 }

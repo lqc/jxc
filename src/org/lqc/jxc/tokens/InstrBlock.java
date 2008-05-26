@@ -4,16 +4,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Vector;
 
-import org.lqc.jxc.Lexem;
-
-public class ComplexInstr extends Instruction {
+public class InstrBlock extends InstrList {
 	
-	public ComplexInstr(int l, int c, List<Instruction> ilist) {
+	public InstrBlock(int l, int c, List<Instruction> ilist) {
 		super(l, c);
 		this.instructions = ilist;
 	}
 	
-	public ComplexInstr() {
+	public InstrBlock() {
 		super(-1, -1);
 		this.instructions = new Vector<Instruction>();
 	}

@@ -1,5 +1,6 @@
 package org.lqc.jxc.transform;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -27,16 +28,17 @@ import org.lqc.jxc.il.VariableValue;
 import org.lqc.jxc.tokens.ArgumentDecl;
 import org.lqc.jxc.tokens.AssignmentInstr;
 import org.lqc.jxc.tokens.CompileUnit;
-import org.lqc.jxc.tokens.ComplexInstr;
 import org.lqc.jxc.tokens.CondInstr;
 import org.lqc.jxc.tokens.ConstantExpr;
-import org.lqc.jxc.tokens.Declaration;
 import org.lqc.jxc.tokens.EmptyInstruction;
 import org.lqc.jxc.tokens.Expression;
 import org.lqc.jxc.tokens.ExternalFuncDecl;
 import org.lqc.jxc.tokens.FunctionCall;
 import org.lqc.jxc.tokens.FunctionDecl;
+import org.lqc.jxc.tokens.ImportStmt;
 import org.lqc.jxc.tokens.IncrementInstr;
+import org.lqc.jxc.tokens.InstrBlock;
+import org.lqc.jxc.tokens.InstrList;
 import org.lqc.jxc.tokens.Instruction;
 import org.lqc.jxc.tokens.LoopInstr;
 import org.lqc.jxc.tokens.NullExpression;
@@ -115,7 +117,7 @@ public class AST2IL implements TreeVisitor {
 	
 	private Signature<FunctionType> sigFor(FunctionDecl f) {
 		return	new Signature<FunctionType>(
-				f.getID(), f.getType());		
+				f.getLocalID(), f.getType());		
 	}
 		
 	private void pickupExpr() {
@@ -132,17 +134,15 @@ public class AST2IL implements TreeVisitor {
 		} 			
 	}
 	
-	public static Module convert(CompileUnit f) {		
+	public static Module convert(CompileUnit f, 
+			Collection<ExternalContext> externals) {		
 		AST2IL cv = new AST2IL();
-		Context builtin = f.getStaticContext();
 		
-		for(Declaration d : builtin.getAllDeclarations()) 
-		{
-			if(d instanceof ExternalFuncDecl)
-				cv.fmap.put((FunctionDecl)d, 
-					((ExternalFuncDecl)d).getCallable());
+		for(ExternalContext ex : externals) {
+			for(ExternalFuncDecl fd : ex.getAllFunctionDecl())
+				cv.fmap.put(fd, fd.getCallable());
 		}
-		
+				
 		f.visitNode(cv);		
 		
 		return (Module)cv.xstack.peek().owner;
@@ -158,7 +158,7 @@ public class AST2IL implements TreeVisitor {
 			/* Construct signatures */
 			Signature<FunctionType> sig = 
 				new Signature<FunctionType>(
-					fd.getID(), fd.getType());
+					fd.getLocalID(), fd.getType());
 			
 			Signature<Type>[] args = 
 				new Signature[fd.getArgs().size()];
@@ -214,7 +214,7 @@ public class AST2IL implements TreeVisitor {
 	public void visit(VarDecl decl) 
 	{
 		Signature<Type> sig = new Signature<Type>(
-				decl.getID(), decl.getType());
+				decl.getLocalID(), decl.getType());
 		
 		Variable v = container().newVar(sig);
 		
@@ -235,7 +235,7 @@ public class AST2IL implements TreeVisitor {
 	
 	public void visit(ArgumentDecl decl) {
 		Signature<Type> sig = new Signature<Type>(
-				decl.getID(), decl.getType());
+				decl.getLocalID(), decl.getType());
 				
 		Variable v = ((Function)container()).newArg(sig);
 		
@@ -274,12 +274,19 @@ public class AST2IL implements TreeVisitor {
 				var.getLine(), v) );		
 	}
 
-	public void visit(ComplexInstr ci) {
+	public void visit(InstrBlock ci) {
 		for(Instruction i : ci)
 		{			
 			i.visitNode(this);			
 			pickupExpr();			
 		}					
+	}
+	
+	public void visit(InstrList instrList) {
+		for(Instruction i : instrList) {
+			i.visitNode(this);			
+			pickupExpr();
+		}		
 	}
 
 	public void visit(AssignmentInstr as) {
@@ -393,6 +400,11 @@ public class AST2IL implements TreeVisitor {
 		
 		pushExpr( new org.lqc.jxc.il.TypeConversion(
 			container(), cast.getLine(), e, cast.dstType()) );
+		
+	}
+
+	public void visit(ImportStmt importStmt) {
+		// TODO Auto-generated method stub
 		
 	}
 

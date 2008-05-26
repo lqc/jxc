@@ -7,7 +7,8 @@ import java.util.Set;
 import org.lqc.util.TriStateLogic;
 
 public abstract class Instruction 
-	extends SyntaxTreeNode implements Iterable<Instruction> 
+	extends SyntaxTreeNode 
+		implements Iterable<Instruction>
 {
 	protected TriStateLogic reachable;
 	private Set<Instruction> singleton;

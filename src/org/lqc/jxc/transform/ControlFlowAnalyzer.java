@@ -15,7 +15,8 @@ import org.lqc.jxc.CompilerWarning;
 import org.lqc.jxc.SyntaxErrorException;
 import org.lqc.jxc.tokens.ArgumentDecl;
 import org.lqc.jxc.tokens.AssignmentInstr;
-import org.lqc.jxc.tokens.ComplexInstr;
+import org.lqc.jxc.tokens.IncrementInstr;
+import org.lqc.jxc.tokens.InstrBlock;
 import org.lqc.jxc.tokens.CondInstr;
 import org.lqc.jxc.tokens.ConstantExpr;
 import org.lqc.jxc.tokens.Declaration;
@@ -23,12 +24,14 @@ import org.lqc.jxc.tokens.EmptyInstruction;
 import org.lqc.jxc.tokens.Expression;
 import org.lqc.jxc.tokens.FunctionCall;
 import org.lqc.jxc.tokens.FunctionDecl;
+import org.lqc.jxc.tokens.InstrList;
 import org.lqc.jxc.tokens.Instruction;
 import org.lqc.jxc.tokens.LoopInstr;
 import org.lqc.jxc.tokens.NullExpression;
 import org.lqc.jxc.tokens.CompileUnit;
 import org.lqc.jxc.tokens.ReturnInstr;
 import org.lqc.jxc.tokens.TreeVisitor;
+import org.lqc.jxc.tokens.TypeCast;
 import org.lqc.jxc.tokens.VarDecl;
 import org.lqc.jxc.tokens.VarExpr;
 import org.lqc.jxc.types.Type;
@@ -119,7 +122,7 @@ public class ControlFlowAnalyzer implements TreeVisitor {
 			&& map.get(retVar).write.equals(FALSE)) {
 			/* TODO: add mandatory return from voids */
 			throw new SyntaxErrorException(decl, 
-					String.format("Function '%s' does not return", decl.getID()) );			
+					String.format("Function '%s' does not return", decl.getLocalID()) );			
 		}
 		
 		map.remove(retVar);
@@ -156,7 +159,7 @@ public class ControlFlowAnalyzer implements TreeVisitor {
 
 	}
 
-	public void visit(ComplexInstr instr) {
+	public void visit(InstrBlock instr) {
 		Context ctx = instr.getStaticContext();				
 		VarInfo rinfo;
 				
@@ -256,6 +259,21 @@ public class ControlFlowAnalyzer implements TreeVisitor {
 	 */
 	public SortedSet<CompilerWarning> getWarnings() {
 		return warnings;
+	}
+
+	public void visit(IncrementInstr incrementInstr) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void visit(TypeCast cast) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	public void visit(InstrList instrList) {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

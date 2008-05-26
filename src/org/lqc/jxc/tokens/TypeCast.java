@@ -9,8 +9,7 @@ public class TypeCast extends Expression {
 
 	public TypeCast(int l, int c, Expression e, Type dst) {
 		super(l, c, dst);
-		
-		/* XXX: make additional check */
+				
 		this.dst = dst;
 		this.e = e;
 	}

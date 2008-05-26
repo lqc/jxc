@@ -7,6 +7,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.util.Map;
 
 import java_cup.runtime.Symbol;
 
@@ -29,7 +30,7 @@ public class JxCompiler {
 	public static void main(String[] args) 
 		throws IOException 
 	{
-		compile(args[0].trim());
+		System.exit( compile(args[0].trim()) );
 	}
 	
 	
@@ -60,24 +61,27 @@ public class JxCompiler {
 			CompileUnit cu = (CompileUnit)root.value;			
 			cu.setName(fname);						
 			
-			System.out.println("Loading libraries...");
+			//System.out.println("Loading libraries...");
 			//Vector<URL> paths = new Vector<URL>();
 			//paths.add( new URL("file://./") );
 			//paths.add( new URL("file://e:\\workspaces\\mimuw\\jxlib\\bin\\") );
 			//URLClassLoader cls = new URLClassLoader(paths.toArray(new URL[0]));
-			ClassLoader cls = ClassLoader.getSystemClassLoader();
+			//ClassLoader cls = ClassLoader.getSystemClassLoader();
 			
-			Module sysm = new Module(cls.loadClass("lang.jx.System"));
-			ExternalContext sysctx = new ExternalContext(null, sysm);
+			//Module sysm = new Module(cls.loadClass("lang.jx.System"));
+			//ExternalContext sysctx = new ExternalContext(null, sysm);
 			/* TODO: Resolve imports here */
 						
 			/* Visibility and type checking */
-			System.out.println("Type checking...");			
-			cu.visitNode(new ScopeAnalyzer(sysctx));
+			System.out.println("Type checking...");		
+			ScopeAnalyzer scope = new ScopeAnalyzer(); 
+			cu.visitNode(scope);
+			
+			Map<String, ExternalContext> exts = scope.externals(); 
 			
 			/* Transform to high-level IL. Single CU yields a module. */
 			System.out.println("Converting to IL...");
-			Module m = AST2IL.convert(cu);
+			Module m = AST2IL.convert(cu, exts.values());
 						
 			/* TODO: flow analysis */
 			//ControlFlowAnalyzer cfa = new ControlFlowAnalyzer();

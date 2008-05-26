@@ -4,7 +4,8 @@ import java.io.PrintStream;
 
 import org.lqc.jxc.tokens.ArgumentDecl;
 import org.lqc.jxc.tokens.AssignmentInstr;
-import org.lqc.jxc.tokens.ComplexInstr;
+import org.lqc.jxc.tokens.ImportStmt;
+import org.lqc.jxc.tokens.InstrBlock;
 import org.lqc.jxc.tokens.CondInstr;
 import org.lqc.jxc.tokens.ConstantExpr;
 import org.lqc.jxc.tokens.EmptyInstruction;
@@ -12,6 +13,7 @@ import org.lqc.jxc.tokens.Expression;
 import org.lqc.jxc.tokens.FunctionCall;
 import org.lqc.jxc.tokens.FunctionDecl;
 import org.lqc.jxc.tokens.IncrementInstr;
+import org.lqc.jxc.tokens.InstrList;
 import org.lqc.jxc.tokens.Instruction;
 import org.lqc.jxc.tokens.LoopInstr;
 import org.lqc.jxc.tokens.NullExpression;
@@ -37,18 +39,18 @@ public class PrintingVisitor implements TreeVisitor {
 	}
 	
 	public void visit(FunctionDecl d) {
-		this.output.printf("[FUNC-DECL] ID: '%s' TYPE: '%s'\n", d.getID(), d.getType());
+		this.output.printf("[FUNC-DECL] ID: '%s' TYPE: '%s'\n", d.getLocalID(), d.getType());
 		this.output.printf("[BODY-START]\n");
 			d.getBody().visitNode(this);
 		this.output.printf("[BODY-END]\n");		
 	}
 	
 	public void visit(ArgumentDecl decl) {
-		this.output.printf("[DECL] ID: %s TYPE: %s\n", decl.getID(), decl.getType());	
+		this.output.printf("[DECL] ID: %s TYPE: %s\n", decl.getLocalID(), decl.getType());	
 	}
 	
 	public void visit(VarDecl decl) {
-		this.output.printf("[DECL] ID: %s TYPE: %s\n", decl.getID(), decl.getType());
+		this.output.printf("[DECL] ID: %s TYPE: %s\n", decl.getLocalID(), decl.getType());
 	}
 	
 	
@@ -64,14 +66,6 @@ public class PrintingVisitor implements TreeVisitor {
 			this.output.print(") ");
 		}
 		this.output.println("]");		
-	}
-
-	public void visit(ComplexInstr instr) {
-		this.output.println("[BLOCK-START]");
-		for(Instruction i : instr) {
-			i.visitNode(this);			
-		}		
-		this.output.println("[BLOCK-END]");		
 	}
 
 	public void visit(AssignmentInstr instr) {
@@ -128,6 +122,26 @@ public class PrintingVisitor implements TreeVisitor {
 	public void visit(TypeCast cast) {
 		this.output.printf("[CAST] from '%s' to '%s'\n",
 				cast.srcType(), cast.dstType() );
+		
+	}
+	
+	
+	public void visit(InstrBlock instr) {
+		this.output.println("[BLOCK-START]");
+		for(Instruction i : instr) {
+			i.visitNode(this);			
+		}		
+		this.output.println("[BLOCK-END]");		
+	}
+
+	public void visit(InstrList instrList) {
+		for(Instruction i : instrList) {
+			i.visitNode(this);			
+		}		
+	}
+
+	public void visit(ImportStmt importStmt) {
+		this.output.printf("[IMPORT] %s\n", importStmt.getPath());
 		
 	}
 

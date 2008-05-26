@@ -1,13 +1,15 @@
 package org.lqc.jxc.tokens;
 
+import org.lqc.util.PathID;
+
 
 public class AssignmentInstr extends Expression {
 	
-	private String id;
+	private PathID id;
 	private Expression value;
 	private VarDecl ref;
 	
-	public AssignmentInstr(int l, int c, String id, Expression e) {
+	public AssignmentInstr(int l, int c, PathID id, Expression e) {
 		super(l, c, e.valueType);
 		this.id = id;
 		this.value = e;		
@@ -21,7 +23,7 @@ public class AssignmentInstr extends Expression {
 	/**
 	 * @return the id
 	 */
-	public String getId() {
+	public PathID getId() {
 		return id;
 	}
 

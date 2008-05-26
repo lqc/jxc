@@ -5,6 +5,8 @@ import java_cup.runtime.*;
 import org.lqc.jxc.types.*;
 import org.lqc.jxc.tokens.*;
 
+import org.lqc.util.PathID;
+
 import java.util.List;
 import java.util.Vector;
 
@@ -25,7 +27,7 @@ parser code {:
 :};
 
 /* Some terminal signs */
-terminal SEMI,COLON;
+terminal SEMI, COLON, DOT;
 terminal LPAR, RPAR;
 terminal LCURLY, RCURLY;
 terminal EQUAL, EQEQ, NEQEQ;
@@ -46,12 +48,19 @@ terminal ELSE;
 terminal FOR;
 terminal WHILE;
 terminal RETURN;
+
 terminal DEFINES;
-terminal IMPLEMENTS; 
+terminal IMPLEMENTS;
+terminal IMPORT; 
 
 terminal Type TYPE;
 
 non terminal ConstantExpr constant;
+
+non terminal PathID path; 
+
+non terminal ImportStmt import_stmt;
+non terminal List<ImportStmt> import_list;
 
 /* Function lists */
 non terminal CompileUnit prog;
@@ -67,10 +76,10 @@ non terminal ArgumentDecl arg_decl;
 
 non terminal List<Instruction> instr_list;
 non terminal Instruction instr;
-non terminal ComplexInstr complex_instr;
+non terminal InstrBlock complex_instr;
 
 
-non terminal List<Declaration> var_decl;
+non terminal InstrList var_decl;
 non terminal List<Pair<String,Expression>> declarator_list;
 non terminal Pair<String,Expression> declarator;
 
@@ -92,9 +101,20 @@ precedence left TIMES, DIVIDE, MODULO;
 precedence left UMINUS, UPLUS, NEG;
 precedence left ELSE;
 
-prog ::= func_list:fl 	
-	{: RESULT = new CompileUnit(flleft, flright, "Unit", fl); :} 	
+prog ::= 
+	import_list:el func_list:fl 	
+	{: RESULT = new CompileUnit(flleft, flright, "Unit", el, fl); :} 	
 ;
+
+import_list ::= 
+	import_list:lst import_stmt:tok 
+		{: lst.add(tok); RESULT = lst; :} 
+	| {: RESULT = new Vector<ImportStmt>(); :}
+;
+
+import_stmt ::= IMPORT path:p SEMI {:
+		RESULT = new ImportStmt(pleft, pright, p); :}
+; 
 
 func_list ::= func_list:fl func_decl:fd {: 
 				RESULT = fl;
@@ -124,16 +144,24 @@ func_decl ::= TYPE:rt ID:fid LPAR arg_dlist:args RPAR complex_instr:ci {:
 
 instr_list ::= instr:i {:
 					RESULT = new Vector<Instruction>();
-					RESULT.add(i); :} |
-			   var_decl:vd {:
-			   		RESULT = new Vector<Instruction>();
-			   		RESULT.addAll(vd); :} |
+					if(i instanceof InstrBlock) {
+						RESULT.add(i);					
+					}
+					else {
+						for(Instruction x : i) 
+			   				RESULT.add(x);
+			   		}
+					:} |			   
 			   instr_list:ilist instr:i {:
-			   		ilist.add(i);
-			   		RESULT = ilist; :} |
-			   instr_list:ilist var_decl:vd {:
-			   		RESULT = ilist;
-			   		ilist.addAll(vd); :}
+			   		if(i instanceof InstrBlock) {
+						ilist.add(i);					
+					}
+					else {
+						for(Instruction x : i) 
+			   				ilist.add(x);
+			   		}
+			   		RESULT = ilist; 
+			   		:}			   
 ;
 
 instr ::= complex_instr:ci {: RESULT = ci; :} |		  
@@ -141,15 +169,16 @@ instr ::= complex_instr:ci {: RESULT = ci; :} |
 		  cond_instr:i {: RESULT = i; :} | 
 		  loop_instr:i {: RESULT = i; :} |
 		  return_instr:i {: RESULT = i; :} |
+		  var_decl:vd SEMI {: RESULT = vd; :} |
 		  SEMI {: RESULT =  new EmptyInstruction(); :}  
 ;
 
 
-assign_expr ::= ID:id EQUAL:op expr:e {: 
+assign_expr ::= path:id EQUAL:op expr:e {: 
 					RESULT = new AssignmentInstr(opleft, opright, id, e); :} |
-				 ID:id PLUSPLUS:op {:
+				path:id PLUSPLUS:op {:
 				 	RESULT = new IncrementInstr(opleft, opright, id, 1); :} |
-				 ID:id MINUSMINUS:op {:
+				path:id MINUSMINUS:op {:
 				 	RESULT = new IncrementInstr(opleft, opright, id, -1); :}
 ;
 
@@ -161,9 +190,14 @@ cond_instr ::= IF:op LPAR expr:e RPAR instr:i {:
 
 loop_instr ::= WHILE:op LPAR expr:e RPAR instr:i {:
 				  RESULT = new LoopInstr(opleft, opright, e, i, Instruction.EMPTY, Instruction.EMPTY); :} |
-			  FOR:op LPAR assign_expr:init SEMI expr:e SEMI assign_expr:post RPAR instr:body
+			  FOR:op LPAR var_decl:init SEMI expr:e SEMI expr:post RPAR instr:body
 			  {:
-			  	RESULT = new LoopInstr(opleft, opright, e, body, init, post); :}
+			  	RESULT = new LoopInstr(opleft, opright, e, body, init, post); 
+			  :} |
+			  FOR:op LPAR assign_expr:init SEMI expr:e SEMI expr:post RPAR instr:body
+			  {:
+			  	RESULT = new LoopInstr(opleft, opright, e, body, init, post); 
+			  :}
 ;
 
 return_instr ::= RETURN:ret SEMI {: RESULT = new ReturnInstr(retleft, retright, Expression.VOID); :} |
@@ -172,16 +206,16 @@ return_instr ::= RETURN:ret SEMI {: RESULT = new ReturnInstr(retleft, retright, 
 
 /** Complex instruction **/
 complex_instr ::= LCURLY:s instr_list:ilist RCURLY {:
-					RESULT = new ComplexInstr(sleft, sright, ilist); :}
+					RESULT = new InstrBlock(sleft, sright, ilist); :}
 ;
 
 /** Variable declaration instruction **/
-var_decl ::= TYPE:t declarator_list:dlist SEMI {:
-			List<Declaration> nl = new Vector<Declaration>(dlist.size()); 					
+var_decl ::= TYPE:t declarator_list:dlist {:
+			InstrList il = new InstrList(tleft, tright); 					
 			for(Pair<String, Expression> decl : dlist) {
-				nl.add( new VarDecl(tleft, tright, t, decl.first(), decl.second()));
+				il.add( new VarDecl(tleft, tright, t, decl.first(), decl.second()));
 			};
-			RESULT = nl; 
+			RESULT = il; 
 			:}
 ;
 
@@ -260,10 +294,10 @@ unary_expr ::= simple_expr:e {: RESULT = e; :} |
                    RESULT = new FunctionCall(opleft, opright, "_NNEG", e); :} %prec UMINUS
 ;
 
-simple_expr ::= ID:id {: RESULT = new VarExpr(idleft, idright, id); :} |
-				ID:id LPAR expr_list:elist RPAR {:
+simple_expr ::= path:id {: RESULT = new VarExpr(idleft, idright, id); :} |
+				path:id LPAR expr_list:elist RPAR {:
                 	RESULT = new FunctionCall(idleft, idright, id, elist); :} | 
-                ID:id LPAR RPAR {:
+                path:id LPAR RPAR {:
                      RESULT = new FunctionCall(idleft, idright, id); :} |
                 LPAR expr:e RPAR {: RESULT = e; :} |                
                 constant:c {: RESULT = c; :} |
@@ -279,6 +313,10 @@ expr_list ::= expr:e {:
 			  expr_list:elist COLON expr:e {:
 			    elist.add(e);
 			    RESULT = elist; :}
+;
+
+path ::= ID:i {: RESULT = new PathID(i); :} |				 
+		 path:p DOT ID:i {: RESULT = p; p.append(i); :}
 ;
 
 constant ::= INT:e {: RESULT = new ConstantExpr(eleft, eright, e); :} | 

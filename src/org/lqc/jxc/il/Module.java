@@ -9,6 +9,7 @@ import java.util.Map;
 import org.lqc.jxc.javavm.FunctionAnnotation;
 import org.lqc.jxc.javavm.JVMBranch;
 import org.lqc.jxc.javavm.JVMPrimitive;
+import org.lqc.jxc.javavm.JxNoExport;
 import org.lqc.jxc.types.FunctionType;
 import org.lqc.jxc.types.Type;
 import org.lqc.jxc.types.TypeParser;
@@ -34,23 +35,37 @@ public class Module implements StaticContainer {
 		slink = NULL_CONTAINER;
 		this.fmap = new HashMap<Signature<FunctionType>, Callable>();
 		
+		System.out.println("Importing " + moduleName);
+		JxNoExport nex = cls.getAnnotation(JxNoExport.class);
+		for(String s : nex.hidden_methods())
+			System.out.println("Hidden field in module: " + s); 
+		
 		for(Method m : cls.getMethods()) {
 			Signature<FunctionType> fsig;
 			Signature<Type>[] asigs;
 									
-			FunctionAnnotation fa = m.getAnnotation(FunctionAnnotation.class);			
+			FunctionAnnotation fa = m.getAnnotation(FunctionAnnotation.class);
+			 
+			JVMPrimitive pa = m.getAnnotation(JVMPrimitive.class);
+			JVMBranch ba = m.getAnnotation(JVMBranch.class);
 			
 			if(fa != null) { 
 				FunctionType type = (FunctionType)TypeParser.parse(fa.type());				
-				fsig = new Signature<FunctionType>(fa.name(), type);
-				
+				fsig = new Signature<FunctionType>(fa.name(), type);				
 			}
 			else {
-				fsig = new Signature<FunctionType>(m);				
+				// if(pa != null || ba != null)
+					fsig = new Signature<FunctionType>(m);
+				/* {
+					System.out.println("Ommiting: " + m.getName());
+					continue; // ignore java native functions
+				} */
+			}			
+			
+			if(pa == null && ba != null) {				
+				this.fmap.put(fsig, new BranchBuiltin(fsig, ba.value()) );
+				continue;				
 			}
-				
-			JVMPrimitive pa = m.getAnnotation(JVMPrimitive.class);
-			JVMBranch ba = m.getAnnotation(JVMBranch.class);
 						
 			if(pa != null) {
 				String bt = pa.value() + "\nifeq %s";
@@ -66,8 +81,7 @@ public class Module implements StaticContainer {
 			int i=0;
 			for(Type t : fsig.type.getArgumentTypes()) 
 				asigs[i++] = new Signature<Type>("arg"+i, t);				
-			
-			
+						
 			this.newFunc(fsig, asigs);
 		}
 	}

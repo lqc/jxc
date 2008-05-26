@@ -66,6 +66,7 @@ Id = {Letter}({AlphaNum}|_)*
 "{" { return newSymbol(yytext(), sym.LCURLY); }
 "}" { return newSymbol(yytext(), sym.RCURLY); }
 "," { return newSymbol(yytext(), sym.COLON); }
+"." { return newSymbol(yytext(), sym.DOT); }
 
 "=" {return newSymbol(yytext(), sym.EQUAL); }
 "==" { return newSymbol(yytext(), sym.EQEQ); }
@@ -105,6 +106,7 @@ Id = {Letter}({AlphaNum}|_)*
 "for" { return newSymbol("Keyword", sym.FOR); }
 "while" { return newSymbol("Keyword", sym.WHILE); }
 "return" { return newSymbol("Keyword", sym.RETURN); }
+"import" { return newSymbol("Keyword", sym.IMPORT); }
 "defines" { return newSymbol("Keyword", sym.DEFINES); }
 "implements" { return newSymbol("Keyword", sym.DEFINES); }
 

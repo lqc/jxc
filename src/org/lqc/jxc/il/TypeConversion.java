@@ -10,8 +10,7 @@ public class TypeConversion extends Expression {
 	public TypeConversion(StaticContainer slink, int line, 
 			Expression e, Type dst) {
 		super(slink, line, dst);
-		
-		/* XXX: make additional check */
+
 		this.dst = dst;
 		this.innerExpr = e;
 	}
