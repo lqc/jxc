@@ -43,7 +43,7 @@ Eol 		= \r|\n|\r\n
 InputChar 	= [^\r\n]
 WhiteSpace 	= {Eol} | [ \t\f]
 
-LineComment = ("#"|"//") {InputChar}* {Eol}
+LineComment = ("//") {InputChar}* {Eol}
 
 Digit = [0-9]
 Letter = [:jletter:]
@@ -65,8 +65,9 @@ Id = {Letter}({AlphaNum}|_)*
 ")" { return newSymbol(yytext(), sym.RPAR); }
 "{" { return newSymbol(yytext(), sym.LCURLY); }
 "}" { return newSymbol(yytext(), sym.RCURLY); }
-"," { return newSymbol(yytext(), sym.COLON); }
+"," { return newSymbol(yytext(), sym.COMMA); }
 "." { return newSymbol(yytext(), sym.DOT); }
+"#" { return newSymbol(yytext(), sym.HASH); }
 
 "=" {return newSymbol(yytext(), sym.EQUAL); }
 "==" { return newSymbol(yytext(), sym.EQEQ); }
@@ -90,13 +91,13 @@ Id = {Letter}({AlphaNum}|_)*
 "++" { return newSymbol(yytext(), sym.PLUSPLUS); }
 "--" { return newSymbol(yytext(), sym.MINUSMINUS); }
 
-"--" { return newSymbol(yytext(), sym.MINUSMINUS); } 
+"->" { return newSymbol(yytext(), sym.RARROW); }
 
-"int" { return newSymbol(yytext(), sym.TYPE, PrimitiveType.INT); }
-"double" { return newSymbol(yytext(), sym.TYPE, PrimitiveType.REAL); }
-"boolean" { return newSymbol(yytext(), sym.TYPE, PrimitiveType.BOOLEAN); }
-"string" { return newSymbol(yytext(), sym.TYPE, PrimitiveType.STRING); }
-"void" { return newSymbol(yytext(), sym.TYPE, Type.VOID); }
+"int" { return newSymbol(yytext(), sym.PTYPE, PrimitiveType.INT); }
+"double" { return newSymbol(yytext(), sym.PTYPE, PrimitiveType.REAL); }
+"boolean" { return newSymbol(yytext(), sym.PTYPE, PrimitiveType.BOOLEAN); }
+"string" { return newSymbol(yytext(), sym.PTYPE, PrimitiveType.STRING); }
+"void" { return newSymbol(yytext(), sym.PTYPE, Type.VOID); }
 
 "true" { return newSymbol("Boolean", sym.BOOLEAN, new Boolean(true)); }
 "false" { return newSymbol("Boolean", sym.BOOLEAN, new Boolean(false)); }
@@ -107,8 +108,9 @@ Id = {Letter}({AlphaNum}|_)*
 "while" { return newSymbol("Keyword", sym.WHILE); }
 "return" { return newSymbol("Keyword", sym.RETURN); }
 "import" { return newSymbol("Keyword", sym.IMPORT); }
-"defines" { return newSymbol("Keyword", sym.DEFINES); }
-"implements" { return newSymbol("Keyword", sym.DEFINES); }
+"fun" { return newSymbol("Keyword", sym.FUN); }
+/* "break" { return newSymbol("Keyword", sym.BREAK); } */
+/* "continue" { return newSymbol("Keyword", sym.CONTINUE); } */
 
 {Real} 		{ return newSymbol("Real", sym.REAL, new Double(yytext()) ); }
 {Integer}	{ return newSymbol("Integer", sym.INT, new Integer(yytext()) ); }

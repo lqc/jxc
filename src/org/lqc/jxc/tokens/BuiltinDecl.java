@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.lqc.jxc.transform.Context;
+import org.lqc.jxc.transform.TreeVisitor;
 import org.lqc.jxc.types.Type;
 
 public class BuiltinDecl extends FunctionDecl {

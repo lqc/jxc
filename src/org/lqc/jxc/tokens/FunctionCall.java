@@ -4,35 +4,40 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 
+import org.lqc.jxc.transform.TreeVisitor;
 import org.lqc.jxc.types.Type;
 import org.lqc.util.PathID;
 
-public class FunctionCall extends Expression {
+public class FunctionCall extends ExprToken<Type> {
 	
 	private PathID fid;
-	private ArrayList<Expression> args;		
-	private FunctionDecl ref;	
+	private ArrayList<ExprToken<? extends Type>> args;		
+	private CallableRef ref;	
 	
-	public FunctionCall(int l, int c, String fid, List<Expression> args) {
+	public FunctionCall(int l, int c, String fid, List<ExprToken<? extends Type>> args) {
 		this(l, c, new PathID(fid), args);
 	}	
 	
-	public FunctionCall(int l, int c, String fid, Expression... args) {
+	public FunctionCall(int l, int c, String fid, ExprToken<? extends Type>... args) {
 		this(l, c, new PathID(fid), args);
 	}
 	
-	public FunctionCall(int l, int c, PathID fid, List<Expression> args) {
+	public FunctionCall(int l, int c, PathID fid, List<ExprToken<? extends Type>> args) {
 		super(l, c, Type.ANY);
 		
 		this.fid = fid;		
-		this.args = new ArrayList<Expression>(args);	
+		this.args = new ArrayList<ExprToken<? extends Type>>();
+		this.args.addAll(args);
 		
 		this.ref = null;
 	}
 	
-	public FunctionCall(int l, int c, PathID fid, Expression... args) {
-		this(l, c, fid, new Vector<Expression>(args.length));
-		for(Expression e : args) { this.args.add(e); }		
+	public FunctionCall(int l, int c, PathID fid, ExprToken<? extends Type>... args) {
+		this(l, c, fid, new Vector<ExprToken<? extends Type>>(args.length));
+				
+		for(ExprToken<? extends Type> e : args)	{ 
+			this.args.add(e);
+		}		
 	}
 	
 	@Override
@@ -50,16 +55,16 @@ public class FunctionCall extends Expression {
 	/**
 	 * @return the args
 	 */
-	public ArrayList<Expression> getArgs() {
+	public ArrayList<ExprToken<? extends Type>> getArgs() {
 		return args;
 	}
 	
-	public void bindRef(FunctionDecl d) {
+	public void bindRef(CallableRef d) {
 		this.ref = d;
 		this.valueType = d.getType().getReturnType();
 	}
 	
-	public FunctionDecl getRef() {
+	public CallableRef getRef() {
 		return this.ref;
 	}	
 	

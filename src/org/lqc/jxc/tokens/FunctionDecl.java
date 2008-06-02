@@ -2,13 +2,16 @@ package org.lqc.jxc.tokens;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Vector;
 
 import org.lqc.jxc.transform.Context;
+import org.lqc.jxc.transform.TreeVisitor;
 import org.lqc.jxc.types.FunctionType;
 import org.lqc.jxc.types.Type;
 
-public class FunctionDecl extends Declaration	
+public class FunctionDecl
+	extends Declaration<FunctionType>
+	implements CallableRef
+
 {	
 	protected Instruction body;
 	protected ArrayList<ArgumentDecl> args;
@@ -17,7 +20,7 @@ public class FunctionDecl extends Declaration
 	 * during scope analysis. 
 	 */
 	protected Context innerContext;
-	
+		
 	public FunctionDecl(int l, int c, String fid, FunctionType t) {
 		super(l, c, t, fid);
 		this.args = new ArrayList<ArgumentDecl>();
@@ -30,13 +33,13 @@ public class FunctionDecl extends Declaration
 	}
 	
 	public FunctionDecl(int l, int c, String fid, Type rt, List<ArgumentDecl> args, Instruction b) {
-		super(l, c, new FunctionType(rt, listToArray(args)), fid);
+		super(l, c, new FunctionType(rt, extractTypes(args)), fid);
 		this.args = new ArrayList<ArgumentDecl>();
 		this.args.addAll(args);		
 		body = b;		
 	}	
 		
-	private static Type[] listToArray(List<ArgumentDecl> args) {
+	private static Type[] extractTypes(List<ArgumentDecl> args) {
 		Type[] types = new Type[args.size()];
 		int i = 0;
 		for(ArgumentDecl d : args) {
@@ -44,17 +47,10 @@ public class FunctionDecl extends Declaration
 		}
 		return types;		
 	}
-	
-	/**
-	 * @return the body
-	 */
+		
 	public Instruction getBody() {
 		return body;
 	}
-
-	/**
-	 * @return the argIDs
-	 */
 	
 	public List<ArgumentDecl> getArgs() {
 		return args;

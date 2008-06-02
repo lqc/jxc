@@ -11,17 +11,21 @@ public interface StaticContainer {
 	public StaticContainer container();
 	
 	public Callable get(Signature<FunctionType> t);
-	public Callable newFunc(Signature<FunctionType> t,
-			Signature<Type>... args);
+	public Function newFunc(int line, Signature<FunctionType> t);
+	public void remove(Callable f); 
 	
 	public Variable get(Signature<Type> t);	
 	public Variable newVar(Signature<Type> t);
 		
-	public Collection<Callable> allFunctions();
+	public Collection<Callable> allCallables();
 	public Collection<Variable> allVariables();
 	
 	public Label getUniqueLabel();
+	public String getUniqueLambdaName();
 	
 	public String absolutePath();
 	public String name();	
+	
+	public Klass getNearestKlass();	
+	
 }

@@ -1,9 +1,10 @@
 package org.lqc.jxc.tokens;
 
+import org.lqc.jxc.transform.TreeVisitor;
 import org.lqc.jxc.types.Type;
 import org.lqc.util.PathID;
 
-public class VarExpr extends Expression {	
+public class VarExpr extends ExprToken<Type> {	
 	
 	private PathID id;
 	private VarDecl ref;	

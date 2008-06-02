@@ -1,9 +1,10 @@
 package org.lqc.jxc.tokens;
 
 import org.lqc.jxc.Lexem;
+import org.lqc.jxc.transform.TreeVisitor;
 import org.lqc.jxc.types.PrimitiveType;
 
-public class ConstantExpr extends Expression {
+public class ConstantExpr extends ExprToken<PrimitiveType> {
 	
 	private Object value;
 			

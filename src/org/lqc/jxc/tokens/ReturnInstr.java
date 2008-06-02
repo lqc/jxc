@@ -1,12 +1,13 @@
 package org.lqc.jxc.tokens;
 
 import org.lqc.jxc.Lexem;
+import org.lqc.jxc.transform.TreeVisitor;
 
 public class ReturnInstr extends Instruction {
 	
-	private Expression value;
+	private ExprToken value;
 	
-	public ReturnInstr(int l, int c, Expression e) {
+	public ReturnInstr(int l, int c, ExprToken e) {
 		super(l, c);		
 		this.value = e;
 	}
@@ -16,11 +17,11 @@ public class ReturnInstr extends Instruction {
 		v.visit(this);
 	}
 	
-	public Expression getValue() {
+	public ExprToken getValue() {
 		return value;
 	}
 
-	public void setValue(Expression e) {
+	public void setValue(ExprToken e) {
 		this.value = e;		
 	}
 

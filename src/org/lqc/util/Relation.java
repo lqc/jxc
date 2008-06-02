@@ -20,7 +20,6 @@ public enum Relation {
 	
 	public boolean equal() {
 		return this.equals(Relation.EQUAL);
-	}
-	
+	}	
 	
 }

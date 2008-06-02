@@ -18,4 +18,9 @@ public class StringType extends PrimitiveType {
 		return Relation.NONCOMPARABLE;
 	}
 
+	@Override
+	public String getShorthand() {
+		return "S";		
+	}
+
 }

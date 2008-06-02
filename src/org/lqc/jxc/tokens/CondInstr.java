@@ -1,14 +1,15 @@
 package org.lqc.jxc.tokens;
 
-import org.lqc.jxc.Lexem;
+import org.lqc.jxc.transform.TreeVisitor;
+import org.lqc.jxc.types.Type;
 
 public class CondInstr extends Instruction {
 	
-	private Expression condition;
+	private ExprToken<? extends Type> condition;
 	private Instruction trueBlock;
 	private Instruction falseBlock;
 		
-	public CondInstr(int l, int c, Expression e, Instruction i1, Instruction i2) {
+	public CondInstr(int l, int c, ExprToken<? extends Type> e, Instruction i1, Instruction i2) {
 		super(l, c);
 		condition = e;
 		trueBlock = i1;
@@ -20,7 +21,7 @@ public class CondInstr extends Instruction {
 		v.visit(this);
 	}
 	
-	public Expression getCondition() {
+	public ExprToken<? extends Type> getCondition() {
 		return this.condition;
 	}
 	
@@ -28,7 +29,7 @@ public class CondInstr extends Instruction {
 		return (cond ? trueBlock : falseBlock);
 	}
 
-	public void setCondition(Expression e) {
+	public void setCondition(ExprToken<? extends Type> e) {
 		this.condition = e;		
 	}
 

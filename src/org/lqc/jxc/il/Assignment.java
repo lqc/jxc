@@ -1,10 +1,13 @@
 package org.lqc.jxc.il;
 
+import org.lqc.jxc.transform.ILVisitor;
+import org.lqc.jxc.types.Type;
 
-public class Assignment extends Expression {
+
+public class Assignment extends Expression<Type> {
 	
 	public Assignment(StaticContainer cont, int line, 
-			Variable t, Expression e) {
+			Variable t, Expression<? extends Type> e) {
 		super(cont, line, e.type);
 		
 		target = t;
@@ -12,7 +15,7 @@ public class Assignment extends Expression {
 	}
 	
 	protected Variable target;
-	protected Expression argument;
+	protected Expression<? extends Type> argument;
 	
 	/**
 	 * @return the target
@@ -23,7 +26,13 @@ public class Assignment extends Expression {
 	/**
 	 * @return the argument
 	 */
-	public Expression getArgument() {
+	public Expression<? extends Type> getArgument() {
 		return argument;
 	}
+
+	@Override
+	public <T> void visit(ILVisitor<T> v) {
+		v.process(this);		
+	}
 }
+

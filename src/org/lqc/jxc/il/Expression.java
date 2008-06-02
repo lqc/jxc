@@ -2,21 +2,21 @@ package org.lqc.jxc.il;
 
 import org.lqc.jxc.types.Type;
 
-public abstract class Expression extends Operation 
+public abstract class Expression<T extends Type> extends Operation 
 {
 	
-	public Expression(StaticContainer cont, int line, Type t) {
+	public Expression(StaticContainer cont, int line, T t) {
 		super(cont, line);
 		
 		type = t;
 	}
 
-	protected Type type;
+	protected T type;
 
 	/**
 	 * @return the type
 	 */
-	public Type getType() {
+	public T getType() {
 		return type;
 	}
 }

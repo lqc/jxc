@@ -47,5 +47,9 @@ public class Variable {
 	public Signature<Type> getSignature() {
 		return signature;
 	}
+	
+	public String toString() {
+		return signature.toString();
+	}
 			
 }

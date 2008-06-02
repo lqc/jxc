@@ -10,7 +10,9 @@ import org.lqc.jxc.javavm.FunctionAnnotation;
 import org.lqc.jxc.javavm.JVMBranch;
 import org.lqc.jxc.javavm.JVMPrimitive;
 import org.lqc.jxc.javavm.JxNoExport;
+import org.lqc.jxc.transform.ILVisitor;
 import org.lqc.jxc.types.FunctionType;
+import org.lqc.jxc.types.KlassType;
 import org.lqc.jxc.types.Type;
 import org.lqc.jxc.types.TypeParser;
 
@@ -19,26 +21,34 @@ import org.lqc.jxc.types.TypeParser;
  * Program module.
  *
  */
-public class Module implements StaticContainer {
+public class Klass extends Expression<KlassType> 
+	implements StaticContainer 
+{
 	
 	private static final StaticContainer NULL_CONTAINER = new NullContainer();	
-	
-	protected StaticContainer slink;	
+		
 	protected String moduleName;
+	protected boolean isInterface;
 	
 	protected Map<Signature<Type>, Variable> vmap;
 	protected Map<Signature<FunctionType>, Callable> fmap;
 	
-	public <T> Module(Class<T> cls) {
+	public <T> Klass(Class<T> cls) {
+		super(NULL_CONTAINER, -2, null);		
+		this.type = new KlassType(this);
+		
 		/* reconstruct module definition from class */
-		this.moduleName = cls.getName();
-		slink = NULL_CONTAINER;
+		this.moduleName = cls.getName();		
 		this.fmap = new HashMap<Signature<FunctionType>, Callable>();
 		
 		System.out.println("Importing " + moduleName);
 		JxNoExport nex = cls.getAnnotation(JxNoExport.class);
-		for(String s : nex.hidden_methods())
-			System.out.println("Hidden field in module: " + s); 
+		if(nex != null) {
+			for(String s : nex.hidden_methods())
+				System.out.println("Hidden field in module: " + s);
+		}
+		
+		this.isInterface = cls.isInterface();
 		
 		for(Method m : cls.getMethods()) {
 			Signature<FunctionType> fsig;
@@ -76,20 +86,31 @@ public class Module implements StaticContainer {
 				this.fmap.put(fsig, new Builtin(fsig, pa.value(), bt) );
 				continue;
 			}
-				
-			asigs = new Signature[fsig.type.getArity()];
-			int i=0;
-			for(Type t : fsig.type.getArgumentTypes()) 
-				asigs[i++] = new Signature<Type>("arg"+i, t);				
+											
 						
-			this.newFunc(fsig, asigs);
+			Function f = this.newFunc(0, fsig);
+						
+			int i = 0;
+			for(Type t : fsig.type.getArgumentTypes()) { 
+				f.newArg( new Signature<Type>("arg"+i, t) );
+				i++;
+			}
 		}
 	}
 	
-	public Module(String name) {
+	
+	public Klass(String name) {
+		this(name, false);	
+	}
+	
+	public Klass(String name, boolean bool) {
+		super(NULL_CONTAINER, -2, null);
+		this.type = new KlassType(this);
+		
 		this.moduleName = name;
 		this.fmap = new HashMap<Signature<FunctionType>, Callable>();		
-		slink = NULL_CONTAINER; 
+		 
+		this.isInterface = bool;
 	}
 	
 	public Callable get(Signature<FunctionType> sig) {
@@ -111,13 +132,22 @@ public class Module implements StaticContainer {
 	public StaticContainer container() {
 		return slink;
 	}
-
-	public Function newFunc(Signature<FunctionType> t,
-			Signature<Type>... args) {
-		Function f = new Function(this, t, args);
+	
+	public Function newFunc(int line, String n, FunctionType t) 
+	{
+		return this.newFunc(line, new Signature<FunctionType>(n,t) );
+	}
+	
+	public Function newFunc(int line, Signature<FunctionType> t) {
+		Function f = new Function(this, line, t, 
+				this.isInterface, !this.isInterface);
 		fmap.put(t, f);
 		
 		return f;
+	}
+	
+	public void remove(Callable f) {
+		this.fmap.remove(f);
 	}
 
 	/** Identifier of last added variable */
@@ -140,7 +170,7 @@ public class Module implements StaticContainer {
 		return moduleName;
 	}
 	
-	public Collection<Callable> allFunctions() {
+	public Collection<Callable> allCallables() {
 		return fmap.values();
 	}
 
@@ -153,6 +183,10 @@ public class Module implements StaticContainer {
 	public Label getUniqueLabel() {
 		return new Label("Label" + _labelID++);		
 	}
+	
+	public String getUniqueLambdaName() {		
+		return moduleName + "$Lambda" + _labelID++;
+	};
 
 	public String absolutePath() {
 		if(slink.name() == null)
@@ -179,8 +213,7 @@ public class Module implements StaticContainer {
 			return null;
 		}
 
-		public Callable newFunc(Signature<FunctionType> t,
-				Signature<Type>... args) {
+		public Function newFunc(int line, Signature<FunctionType> t) {
 			throw new UnsupportedOperationException();				
 		}
 
@@ -188,7 +221,7 @@ public class Module implements StaticContainer {
 			throw new UnsupportedOperationException();
 		}
 
-		public Collection<Callable> allFunctions() {
+		public Collection<Callable> allCallables() {
 			return Collections.EMPTY_LIST;
 		}
 
@@ -201,11 +234,45 @@ public class Module implements StaticContainer {
 		}
 
 		public String absolutePath() {
-			return "";
+			return "<null>";
 		}
 
 		public String name() {
 			return null;
+		}
+
+		public String getUniqueLambdaName() {			
+			throw new UnsupportedOperationException();
+		}
+
+		public void remove(Callable f) {
+			throw new UnsupportedOperationException();
+		}
+
+		public Klass getNearestKlass() {
+			throw new UnsupportedOperationException();
 		}	
-	};
+	}	
+	
+	public String toString() {
+		return this.getModuleName();
+	}
+
+
+	/**
+	 * @return the isInterface
+	 */
+	public boolean isInterface() {
+		return isInterface;
+	}
+
+
+	@Override
+	public <T> void visit(ILVisitor<T> v) {
+		// 		
+	}
+
+	public Klass getNearestKlass() {
+		return this;
+	}	
 }

@@ -62,18 +62,23 @@ public class DAGraph<K extends PartiallyOrdered<? super K> , V> implements POSet
 	{
 		Node ret = null;
 		
+		Vector<Node> matches = new Vector<Node>();
+		
 		for(Node n : root.children) {
 			Node x = this.find(n, key);
-			if(x != null) {
-				ret = x;
-				break;
-			}
+			if(x != null) 
+				matches.add(x);
 		}
-				
-		if(ret == null)
-			throw new ElementNotFoundException();
 		
-		return ret.value;		
+		switch(matches.size()) {
+			case 1:
+				return matches.firstElement().value;
+			case 0:
+				throw new ElementNotFoundException();
+			default:
+				throw new MultiplyMatchException(matches);
+		}			
+		
 	}
 	
 	private Node find(Node root, K key) 
@@ -168,7 +173,6 @@ public class DAGraph<K extends PartiallyOrdered<? super K> , V> implements POSet
 	
 	public String toString() {
 		StringBuffer buf = new StringBuffer();
-		/* TODO display all elements */
 		buf.append("<DAG>");
 		
 		return buf.toString();

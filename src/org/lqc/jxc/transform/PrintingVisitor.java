@@ -9,17 +9,17 @@ import org.lqc.jxc.tokens.InstrBlock;
 import org.lqc.jxc.tokens.CondInstr;
 import org.lqc.jxc.tokens.ConstantExpr;
 import org.lqc.jxc.tokens.EmptyInstruction;
-import org.lqc.jxc.tokens.Expression;
+import org.lqc.jxc.tokens.ExprToken;
 import org.lqc.jxc.tokens.FunctionCall;
 import org.lqc.jxc.tokens.FunctionDecl;
 import org.lqc.jxc.tokens.IncrementInstr;
 import org.lqc.jxc.tokens.InstrList;
 import org.lqc.jxc.tokens.Instruction;
+import org.lqc.jxc.tokens.LambdaExpr;
 import org.lqc.jxc.tokens.LoopInstr;
 import org.lqc.jxc.tokens.NullExpression;
 import org.lqc.jxc.tokens.CompileUnit;
 import org.lqc.jxc.tokens.ReturnInstr;
-import org.lqc.jxc.tokens.TreeVisitor;
 import org.lqc.jxc.tokens.TypeCast;
 import org.lqc.jxc.tokens.VarDecl;
 import org.lqc.jxc.tokens.VarExpr;
@@ -60,7 +60,7 @@ public class PrintingVisitor implements TreeVisitor {
 
 	public void visit(FunctionCall call) {
 		this.output.printf("[CALL %s ", call.getFid());
-		for(Expression e : call.getArgs()) {
+		for(ExprToken e : call.getArgs()) {
 			this.output.print("(");
 			e.visitNode(this);
 			this.output.print(") ");
@@ -143,6 +143,10 @@ public class PrintingVisitor implements TreeVisitor {
 	public void visit(ImportStmt importStmt) {
 		this.output.printf("[IMPORT] %s\n", importStmt.getPath());
 		
+	}
+
+	public void visit(LambdaExpr lambdaExpr) {
+		this.output.println("[LAMBDA]");		
 	}
 
 }

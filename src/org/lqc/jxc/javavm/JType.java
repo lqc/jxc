@@ -5,11 +5,14 @@ import java.util.Locale;
 import org.lqc.jxc.CompilerException;
 import org.lqc.jxc.il.Signature;
 import org.lqc.jxc.types.FunctionType;
+import org.lqc.jxc.types.KlassType;
 import org.lqc.jxc.types.PrimitiveType;
 import org.lqc.jxc.types.Type;
 
 /** Types supported natively by JVM. */
 public class JType {	
+	
+	public static int REFERENCE_SIZE = 1;
 	
 	public static final JType INTEGER = new JType(1, "I", "i");
 	public static final JType BOOLEAN = new JType(1, "Z", "i");
@@ -48,7 +51,7 @@ public class JType {
 		return this.signature;
 	}
 	
-	public static Type toILType(Class cls) {
+	public static Type toILType(Class<?> cls) {
 		if(cls.equals(Integer.TYPE))
 			return PrimitiveType.INT;
 		
@@ -86,7 +89,7 @@ public class JType {
 			return VOID;
 		
 		if(t instanceof FunctionType) 
-			return new JType(1, fsig((FunctionType)t), "C");
+			return refType("Closure" + t.getShorthand());
 		
 		return refType("java.lang.Object");
 	}
@@ -145,18 +148,7 @@ public class JType {
 			signature) );
 	}
 	
-	private static String fsig(FunctionType ft) {
-		StringBuffer buf = new StringBuffer();
-		buf.append("Llang/jx/Function");
-		for(Type t : ft.getArgumentTypes()) {			
-			buf.append(JType.fromILType(t).prefix);			
-		}
-		buf.append("_");
-		buf.append(JType.fromILType(ft.getReturnType()).prefix);
-		buf.append(";");
-		
-		return buf.toString();
-	}
+	
 	
 	/**
 	 * 

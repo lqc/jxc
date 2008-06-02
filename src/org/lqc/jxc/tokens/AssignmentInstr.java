@@ -1,15 +1,17 @@
 package org.lqc.jxc.tokens;
 
+import org.lqc.jxc.transform.TreeVisitor;
+import org.lqc.jxc.types.Type;
 import org.lqc.util.PathID;
 
 
-public class AssignmentInstr extends Expression {
+public class AssignmentInstr extends ExprToken<Type> {
 	
 	private PathID id;
-	private Expression value;
+	private ExprToken<? extends Type> value;
 	private VarDecl ref;
 	
-	public AssignmentInstr(int l, int c, PathID id, Expression e) {
+	public AssignmentInstr(int l, int c, PathID id, ExprToken<? extends Type> e) {
 		super(l, c, e.valueType);
 		this.id = id;
 		this.value = e;		
@@ -30,7 +32,7 @@ public class AssignmentInstr extends Expression {
 	/**
 	 * @return the value
 	 */
-	public Expression getValue() {
+	public ExprToken<? extends Type> getValue() {
 		return value;
 	}
 
@@ -48,7 +50,7 @@ public class AssignmentInstr extends Expression {
 		this.ref = ref;
 	}
 
-	public void setValue(Expression e) {
+	public void setValue(ExprToken<? extends Type> e) {
 		this.value = e;		
 	}
 

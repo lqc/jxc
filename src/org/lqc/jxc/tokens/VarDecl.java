@@ -1,24 +1,25 @@
 package org.lqc.jxc.tokens;
 
+import org.lqc.jxc.transform.TreeVisitor;
 import org.lqc.jxc.types.Type;
 
-public class VarDecl extends Declaration {	
+public class VarDecl<T extends Type> extends Declaration<T> {	
 
-	public VarDecl(int l, int c, Type t, String id, Expression init) {
+	public VarDecl(int l, int c, T t, String id, ExprToken<? extends T> init) {
 		super(l, c, t, id);
 		initialValue = init;
 	}
 	
-	public VarDecl(Type t, String id) {
+	public VarDecl(T t, String id) {
 		super(-1, -1, t, id);
 		
 		if(t.equals(Type.VOID)) 
-			initialValue = Expression.VOID;
+			initialValue = ExprToken.VOID(t);
 		else
-			initialValue = Expression.NULL;
+			initialValue = ExprToken.NULL(t);
 	}
 
-	protected Expression initialValue;
+	protected ExprToken<? extends T> initialValue;
 	
 	@Override
 	public void visitNode(TreeVisitor v) {
@@ -28,11 +29,11 @@ public class VarDecl extends Declaration {
 	/**
 	 * @return the initialValue
 	 */
-	public Expression getInitialValue() {
+	public ExprToken<? extends T> getInitialValue() {
 		return initialValue;
 	}
 
-	public void setInitialValue(Expression e) {
+	public void setInitialValue(ExprToken<? extends T> e) {
 		this.initialValue = e;		
 	}
 	

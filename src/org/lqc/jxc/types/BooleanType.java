@@ -18,4 +18,11 @@ public class BooleanType extends PrimitiveType {
 		return Relation.NONCOMPARABLE;
 	}
 
+	@Override
+	public String getShorthand() {
+		return "B";
+	}
+	
+
+
 }

@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Vector;
 
 import org.lqc.jxc.javavm.JType;
+import org.lqc.jxc.transform.ILVisitor;
 import org.lqc.jxc.types.FunctionType;
 import org.lqc.jxc.types.Type;
 
@@ -18,8 +19,11 @@ public class Function implements StaticContainer, Callable,
 	Iterable<Operation>
 {
 	
-	/** Function name. */
+	/** Function declared signature. */
 	protected Signature<FunctionType> signature;
+	
+	/** Function call signature. */
+	protected List<Type> catypes;
 		
 	/** List of local variables. */
 	protected ArrayList<Variable> localVars;
@@ -37,7 +41,16 @@ public class Function implements StaticContainer, Callable,
 	protected List<Operation> ops;
 	
 	/** Static link. */
-	protected StaticContainer slink;
+	protected Klass slink;
+		
+	/** Is this an abstract function definition. */
+	protected boolean isAbstract;
+	
+	/** Is this an abstract function definition. */
+	protected boolean isStatic;
+	
+	/** Source line of declaration */
+	protected int line;
 	
 	/** Identifier of last added variable */
 	private int _lastID = -1;
@@ -46,36 +59,36 @@ public class Function implements StaticContainer, Callable,
 		return ++_lastID;
 	}
 					
-	public Function(StaticContainer container, 
-			Signature<FunctionType> sig,
-			Signature<Type>... args)
-	{
+	public Function(Klass container,
+			int line, Signature<FunctionType> sig,
+			boolean abs, boolean stat)
+	{		
 		slink = container;
 		signature = sig;
+		catypes = new Vector<Type>();
+		
+		this.line = line;
 				
 		vmap = new HashMap<Signature<Type>, Integer>();
 		amap = new HashMap<Signature<Type>, Integer>();
 		
 		localVars = new ArrayList<Variable>();		
-		
-		/*		
-		for(Signature<Type> s : args) {
-			Variable v = new Variable(this, genLUID(), s);
-			
-			localVars.add(v.localID, v);
-			amap.put(s, v.localID);
-		}
-		*/ 
-		
 		ops = new Vector<Operation>();
+		
+		this.isAbstract = abs;
+		this.isStatic = stat;
 	}
 	
 	public Variable newArg(Signature<Type> signature) {
 		Variable v = new Variable(this, genLUID(), signature);
 		
 		localVars.add(v.localID, v);
+		
 		amap.put(signature, v.localID);
 		vmap.put(signature, v.localID);
+		
+		catypes.add(signature.type);
+		
 		return v;
 	}
 	
@@ -104,12 +117,15 @@ public class Function implements StaticContainer, Callable,
 		ops.add(op);
 	}
 
-	public Callable newFunc(Signature<FunctionType> t,
-			Signature<Type>... args) {
-		throw new UnsupportedOperationException();
+	public Function newFunc(int line, Signature<FunctionType> t) {
+		return this.slink.newFunc(line, t);
+	}
+	
+	public void remove(Callable f) {
+		this.slink.remove(f);		
 	}
 
-	public Collection<Callable> allFunctions() {
+	public Collection<Callable> allCallables() {
 		return Collections.EMPTY_LIST;
 	}
 
@@ -117,7 +133,7 @@ public class Function implements StaticContainer, Callable,
 		return localVars;		
 	}
 	
-	public Signature<FunctionType> callSignature() {
+	public Signature<FunctionType> declSignature() {
 		return signature;
 	}
 
@@ -125,6 +141,14 @@ public class Function implements StaticContainer, Callable,
 		return ops.iterator();
 	}
 
+	public <T> void visit(ILVisitor<T> v) {
+		v.begin(this);
+		
+		for(Operation op : ops)
+			op.visit(v);
+		
+		v.end(this);
+	}
 	
 	private int _labelID = 0;
 	public Label getUniqueLabel() {
@@ -139,7 +163,7 @@ public class Function implements StaticContainer, Callable,
 		return this.signature.name;
 	}
 
-	public StaticContainer container() {
+	public Klass container() {
 		return slink;
 	}
 	
@@ -159,4 +183,44 @@ public class Function implements StaticContainer, Callable,
 		
 		return k;
 	}	
+	
+	public int lastLineNumber() {
+		if(!ops.isEmpty())
+			return this.ops.get(ops.size()-1).line;
+		else
+			return this.line;
+	}
+	
+	public String toString() {
+		return this.signature.toString();
+	}
+
+	public String getUniqueLambdaName() {
+		return this.slink.getUniqueLambdaName();		
+	}
+
+	/**
+	 * @return the isAbstract
+	 */
+	public boolean isAbstract() {
+		return isAbstract;
+	}
+
+	/**
+	 * @return the isStatic
+	 */
+	public boolean isStatic() {
+		return isStatic;
+	}
+
+	public Signature<FunctionType> callSignature() {
+		return new Signature<FunctionType>(signature.name, 
+				new FunctionType(signature.type.getReturnType(), catypes) );		
+	}
+
+	public Klass getNearestKlass() {
+		return slink.getNearestKlass();
+	}
+
+	
 }

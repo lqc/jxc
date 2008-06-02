@@ -9,29 +9,33 @@ import java.util.Stack;
 
 import org.lqc.jxc.CompilerException;
 import org.lqc.jxc.il.Assignment;
+import org.lqc.jxc.il.Block;
 import org.lqc.jxc.il.Branch;
 import org.lqc.jxc.il.Call;
 import org.lqc.jxc.il.Callable;
-import org.lqc.jxc.il.CompoundOperation;
+import org.lqc.jxc.il.Closure;
 import org.lqc.jxc.il.Constant;
+import org.lqc.jxc.il.Expression;
 import org.lqc.jxc.il.Function;
+import org.lqc.jxc.il.Klass;
 import org.lqc.jxc.il.Loop;
-import org.lqc.jxc.il.Module;
 import org.lqc.jxc.il.Nop;
 import org.lqc.jxc.il.Operation;
 import org.lqc.jxc.il.Return;
 import org.lqc.jxc.il.ReturnVoid;
 import org.lqc.jxc.il.Signature;
 import org.lqc.jxc.il.StaticContainer;
+import org.lqc.jxc.il.TypeConversion;
 import org.lqc.jxc.il.Variable;
 import org.lqc.jxc.il.VariableValue;
 import org.lqc.jxc.tokens.ArgumentDecl;
 import org.lqc.jxc.tokens.AssignmentInstr;
+import org.lqc.jxc.tokens.CallableRef;
 import org.lqc.jxc.tokens.CompileUnit;
 import org.lqc.jxc.tokens.CondInstr;
 import org.lqc.jxc.tokens.ConstantExpr;
 import org.lqc.jxc.tokens.EmptyInstruction;
-import org.lqc.jxc.tokens.Expression;
+import org.lqc.jxc.tokens.ExprToken;
 import org.lqc.jxc.tokens.ExternalFuncDecl;
 import org.lqc.jxc.tokens.FunctionCall;
 import org.lqc.jxc.tokens.FunctionDecl;
@@ -40,14 +44,16 @@ import org.lqc.jxc.tokens.IncrementInstr;
 import org.lqc.jxc.tokens.InstrBlock;
 import org.lqc.jxc.tokens.InstrList;
 import org.lqc.jxc.tokens.Instruction;
+import org.lqc.jxc.tokens.LambdaExpr;
 import org.lqc.jxc.tokens.LoopInstr;
+import org.lqc.jxc.tokens.MethodRef;
 import org.lqc.jxc.tokens.NullExpression;
 import org.lqc.jxc.tokens.ReturnInstr;
-import org.lqc.jxc.tokens.TreeVisitor;
 import org.lqc.jxc.tokens.TypeCast;
 import org.lqc.jxc.tokens.VarDecl;
 import org.lqc.jxc.tokens.VarExpr;
 import org.lqc.jxc.types.FunctionType;
+import org.lqc.jxc.types.KlassType;
 import org.lqc.jxc.types.Type;
 
 
@@ -57,24 +63,28 @@ public class AST2IL implements TreeVisitor {
 	{
 		public StaticContainer owner;
 		public Queue<Operation> ops;
-		public Stack<org.lqc.jxc.il.Expression> estack;
+		public Stack<Expression<? extends Type>> estack;
 		
 		public Frame(StaticContainer owner) {
 			this.owner = owner;
 			
 			this.ops = new LinkedList<Operation>();
-			this.estack = new Stack<org.lqc.jxc.il.Expression>();
+			this.estack = new Stack<Expression<? extends Type>>();
 		}		
 	}
 		
 	private Stack<Frame> xstack;	
 	
 	private Map<VarDecl, Variable> vmap;
-	private Map<FunctionDecl, Callable> fmap;
+	private Map<CallableRef, Callable> fmap;
+		
+	// map of names to class objects -- needed for closures
+	private Map<String, Klass> kmap;
 	
 	private AST2IL() {
 		vmap = new HashMap<VarDecl, Variable>();
-		fmap = new HashMap<FunctionDecl, Callable>();
+		fmap = new HashMap<CallableRef, Callable>();
+		kmap = new HashMap<String, Klass>();
 		
 		xstack = new Stack<Frame>();
 	}
@@ -99,11 +109,11 @@ public class AST2IL implements TreeVisitor {
 		return !xstack.peek().ops.isEmpty();
 	}
 	
-	private void pushExpr(org.lqc.jxc.il.Expression e) {
+	private void pushExpr(Expression<? extends Type> e) {
 		xstack.peek().estack.push(e);		
 	}
 	
-	private org.lqc.jxc.il.Expression popExpr() {
+	private Expression<? extends Type> popExpr() {
 		return xstack.peek().estack.pop();		
 	}
 	
@@ -111,7 +121,7 @@ public class AST2IL implements TreeVisitor {
 		return !xstack.peek().estack.isEmpty();
 	}
 	
-	private org.lqc.jxc.il.Expression peekExpr() {
+	private Expression<? extends Type> peekExpr() {
 		return xstack.peek().estack.peek();
 	}
 	
@@ -134,7 +144,7 @@ public class AST2IL implements TreeVisitor {
 		} 			
 	}
 	
-	public static Module convert(CompileUnit f, 
+	public static Collection<Klass> convert(CompileUnit f, 
 			Collection<ExternalContext> externals) {		
 		AST2IL cv = new AST2IL();
 		
@@ -145,12 +155,13 @@ public class AST2IL implements TreeVisitor {
 				
 		f.visitNode(cv);		
 		
-		return (Module)cv.xstack.peek().owner;
+		return cv.kmap.values();
 	}
 
 	public void visit(CompileUnit file) 
 	{		
-		Module m = new Module(file.getName());		
+		Klass m = new Klass(file.getName());
+		kmap.put(m.getModuleName(), m);
 		xstack.push(new Frame(m));
 				
 		for(FunctionDecl fd : file.getFunctions())
@@ -163,16 +174,14 @@ public class AST2IL implements TreeVisitor {
 			Signature<Type>[] args = 
 				new Signature[fd.getArgs().size()];
 			
-			int i = 0;
-			/*
+						
+			Function f = container().newFunc(fd.getLine(), sig);
+								
 			for(ArgumentDecl ad : fd.getArgs()) {
-				args[i] = new Signature<Type>(
-						ad.getID(), ad.getType());
-				i++;
+				f.newArg(new Signature<Type>(
+						ad.getLocalID(), ad.getType()) );				
 			}
-			*/
 			
-			Callable f = container().newFunc(sig);
 			fmap.put(fd, f);			
 		}
 		
@@ -180,10 +189,10 @@ public class AST2IL implements TreeVisitor {
 		{		
 			fd.visitNode(this);
 		}
+		xstack.pop();		
 	}
 
-	public void visit(FunctionDecl fd) {		
-		/* TODO: this isn't good for nested functions */		
+	public void visit(FunctionDecl fd) {			
 		Callable c = fmap.get(fd);
 		
 		/* put our frame on stack */
@@ -193,7 +202,9 @@ public class AST2IL implements TreeVisitor {
 		
 			/* map arguments */
 			for(ArgumentDecl vd : fd.getArgs())
-				vd.visitNode(this);						
+			{
+				vd.visitNode(this);
+			}
 		
 			/* traverse instructions */
 			fd.getBody().visitNode(this);	
@@ -210,7 +221,7 @@ public class AST2IL implements TreeVisitor {
 		/* function declarations do nothing */
 		appendOp( new Nop(container(), fd.getLine()) );
 	}
-
+	
 	public void visit(VarDecl decl) 
 	{
 		Signature<Type> sig = new Signature<Type>(
@@ -222,10 +233,10 @@ public class AST2IL implements TreeVisitor {
 		vmap.put(decl, v);
 		
 		/* result is an assignment */
-		if(!decl.getInitialValue().equals(Expression.NULL)) {			
+		if(!decl.getInitialValue().equals(ExprToken.NULL)) {			
 			decl.getInitialValue().visitNode(this);
 						
-			org.lqc.jxc.il.Expression e = popExpr();
+			Expression<? extends Type> e = popExpr();
 			appendOp( new Assignment(container(), decl.getLine(), v, e) );						
 		}
 		else {
@@ -237,30 +248,84 @@ public class AST2IL implements TreeVisitor {
 		Signature<Type> sig = new Signature<Type>(
 				decl.getLocalID(), decl.getType());
 				
-		Variable v = ((Function)container()).newArg(sig);
+		Variable v = ((Function)container()).get(sig);
 		
 		/* add a maping to global symbol table */
 		vmap.put(decl, v);		
 	}
 
 	public void visit(FunctionCall call) {
-		FunctionDecl fd = call.getRef();
+		CallableRef cref = call.getRef();
 		Callable ref;	
+		Expression<? extends Type> self = null;
 		
-		ref = fmap.get(call.getRef());
-		if(ref == null) {
-			throw new CompilerException("[AST2IL] Fcall conversion failure of: " + call.getFid());
-		}			
+		if(cref instanceof FunctionDecl) { 
+			ref = fmap.get(cref);
+		
+			if(ref == null) {
+				throw new CompilerException(String.format(
+					"[AST2IL] Reference bound to named function '%s' at line %d not found.",
+					call.getFid(), call.getLine()) );
+			}						
+		
+		}
+		else if(cref instanceof MethodRef) {
+			MethodRef mref = (MethodRef)cref;
+			
+			// we need the instance as first argument			 
+			Variable v = vmap.get(mref.getInstance());
+			FunctionType ft = (FunctionType) v.getSignature().type;
+			
+			// we need to pass a callable, which is
+			// actually the closure's method
+			String ksig = "Closure" + v.getSignature().type.getShorthand();
+			
+			Klass klass = kmap.get(ksig);
+			if(klass == null) {
+				// create on runtime
+				klass = createKlassForClosure(ft);						
+				kmap.put(ksig, klass);
+			}
+			
+			ref = klass.get( new Signature<FunctionType>("_call", ft) );
+			
+			self = new VariableValue(container(), call.getLine(), v);						
+		} else {
+			throw new CompilerException(String.format(
+					"[AST2IL] Invalid call to '%s' at line %d.",
+						call.getFid(), call.getLine()) );
+		}
 		
 		Call c = new Call(container(), call.getLine(), ref);
 		
-		for(Expression e : call.getArgs()) {
+		if(self != null)
+			c.addArgument(self);
+		
+		for(ExprToken<? extends Type> e : call.getArgs()) {
 			e.visitNode(this);			
 			c.addArgument(popExpr());			
-		}			
+		}
 		
-		/* push on to the stack */
 		pushExpr(c);
+		return;		
+	}
+
+	private static Klass createKlassForClosure(FunctionType type) {
+		
+		String ksig = "Closure" + type.getShorthand();
+		Klass klass = new Klass(ksig, true);			 
+		Function f = klass.newFunc(0, "_call", type);
+		
+		f.newArg( new Signature<Type>("_self", new KlassType(klass) ) );
+		
+		int i=0;
+		for(Type t : type.getArgumentTypes()) 
+		{
+			f.newArg( new Signature<Type>("arg" + i, t) );
+			i++;
+		}
+;		
+		return klass;
 	}
 
 	public void visit(ConstantExpr c) {
@@ -293,7 +358,7 @@ public class AST2IL implements TreeVisitor {
 		Variable v = vmap.get(as.getRef());
 		
 		as.getValue().visitNode(this);		
-		org.lqc.jxc.il.Expression e = popExpr();
+		Expression<? extends Type> e = popExpr();
 			
 		pushExpr( new Assignment(container(), as.getLine(), v, e));
 	}
@@ -306,12 +371,12 @@ public class AST2IL implements TreeVisitor {
 		/* append loop init block */
 		loop.getInitInstr().visitNode(this);
 		
-		Expression e = loop.getCondition();
+		ExprToken<Type> e = loop.getCondition();
 		e.visitNode(this);
 		
-		org.lqc.jxc.il.Expression ex = popExpr();
+		Expression<? extends Type> ex = popExpr();
 		
-		CompoundOperation body = new CompoundOperation(
+		Block body = new Block(
 				container(), loop.getLine());
 		
 		/* embrance body and post */
@@ -331,10 +396,10 @@ public class AST2IL implements TreeVisitor {
 	}
 
 	public void visit(ReturnInstr ret) {
-		if(!ret.getValue().equals(Expression.VOID)) {
+		if(!ret.getValue().equals(ExprToken.VOID)) {
 			ret.getValue().visitNode(this);
 			
-			org.lqc.jxc.il.Expression e = popExpr();			
+			Expression<? extends Type> e = popExpr();			
 			appendOp(new Return(container(), ret.getLine(), e));
 			
 			return;
@@ -344,12 +409,12 @@ public class AST2IL implements TreeVisitor {
 	}
 
 	public void visit(CondInstr cond) {
-		Expression e = cond.getCondition();
+		ExprToken<? extends Type> e = cond.getCondition();
 		e.visitNode(this);
 		
-		org.lqc.jxc.il.Expression ex = popExpr();
+		Expression<? extends Type> ex = popExpr();
 		
-		CompoundOperation branchA, branchB;
+		Block branchA, branchB;
 		
 		/* create a fictional frame */
 		xstack.push( new Frame(container()));		
@@ -358,7 +423,7 @@ public class AST2IL implements TreeVisitor {
 		cond.getBranch(true).visitNode(this);		
 		pickupExpr();
 		
-		branchA = new CompoundOperation(container(), 
+		branchA = new Block(container(), 
 				cond.getBranch(true).getLine());
 		/* add all ops */
 		while(moreOps())
@@ -373,7 +438,7 @@ public class AST2IL implements TreeVisitor {
 		cond.getBranch(false).visitNode(this);
 		pickupExpr();
 		
-		branchB = new CompoundOperation(container(), 
+		branchB = new Block(container(), 
 				cond.getBranch(false).getLine());
 		
 		/* add all ops */
@@ -396,16 +461,60 @@ public class AST2IL implements TreeVisitor {
 
 	public void visit(TypeCast cast) {
 		cast.getExpression().visitNode(this);		
-		org.lqc.jxc.il.Expression e = popExpr();
+		Expression<? extends Type> e = popExpr();
 		
-		pushExpr( new org.lqc.jxc.il.TypeConversion(
+		pushExpr( new TypeConversion(
 			container(), cast.getLine(), e, cast.dstType()) );
 		
 	}
 
 	public void visit(ImportStmt importStmt) {
-		// TODO Auto-generated method stub
+		// this is no longer needed		
+	}
+
+	public void visit(LambdaExpr lambda) {		
+		// TODO: lambda -> IL not implemented yet
+		Signature<FunctionType> sig = 
+			new Signature<FunctionType>(
+				container().getUniqueLambdaName(), 
+				(FunctionType)lambda.getType() );
 		
+		Function f = new Function(container().getNearestKlass(), 
+				lambda.getLine(), sig, false, false);
+
+		xstack.push( new Frame(f) );
+		
+		/* map arguments */
+		for(ArgumentDecl vd : lambda.getArgs()) {
+			f.newArg(new Signature<Type>(vd.getLocalID(), vd.getType()) );
+			vd.visitNode(this);						
+		}
+		
+		/* traverse instructions */
+		lambda.getBody().visitNode(this);	
+		
+		/* instructions are left on operation list */
+		while(moreOps())
+			f.addOp(nextOp());
+		
+		/* add yield as a return */
+		ExprToken<? extends Type> y = lambda.getYield();
+		
+		if(y.getType().equals(Type.VOID))
+			f.addOp( new ReturnVoid(container(), f.lastLineNumber()) );
+		else {
+			y.visitNode(this);
+			Expression<? extends Type> re = popExpr();			
+			f.addOp( new Return(container(), f.lastLineNumber(), re) );
+		}
+						
+		/* remove our frame from stack */
+		xstack.pop();
+		
+		Closure closure = new Closure(f);
+		kmap.put(closure.getModuleName(), closure);
+				
+		pushExpr( closure );		
 	}
 
 	

@@ -1,15 +1,15 @@
 package org.lqc.jxc.tokens;
 
-import org.lqc.jxc.Lexem;
+import org.lqc.jxc.transform.TreeVisitor;
 
 public class LoopInstr extends Instruction {
 	
-	private Expression condition;
+	private ExprToken condition;
 	private Instruction body;
 	private Instruction initial;
 	private Instruction post;
 	
-	public LoopInstr(int l, int c, Expression e, Instruction b, Instruction i, Instruction p) {
+	public LoopInstr(int l, int c, ExprToken e, Instruction b, Instruction i, Instruction p) {
 		super(l, c);
 		this.condition = e;
 		this.initial = i;
@@ -25,7 +25,7 @@ public class LoopInstr extends Instruction {
 	/**
 	 * @return the condition
 	 */
-	public Expression getCondition() {
+	public ExprToken getCondition() {
 		return condition;
 	}
 
@@ -50,7 +50,7 @@ public class LoopInstr extends Instruction {
 		return post;
 	}
 
-	public void setCondition(Expression e) {
+	public void setCondition(ExprToken e) {
 		this.condition = e;		
 	}
 

@@ -3,9 +3,9 @@ package org.lqc.jxc.tokens;
 import org.lqc.jxc.types.Type;
 import org.lqc.util.PathID;
 
-public abstract class Declaration extends Instruction {
+public abstract class Declaration<T extends Type> extends Instruction {
 	
-	public Declaration(int l, int c, Type t, String id) {
+	public Declaration(int l, int c, T  t, String id) {
 		super(l, c);
 		
 		/* XXX: this might need a fix */
@@ -13,13 +13,13 @@ public abstract class Declaration extends Instruction {
 		this.entityType = t;		
 	}
 	
-	protected Type entityType;
+	protected T entityType;
 	protected PathID entityID;	
 	
 	/**
 	 * @return the entityType
 	 */
-	public Type getType() {
+	public T getType() {
 		return entityType;
 	}
 	

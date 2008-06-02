@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Vector;
 
 import org.lqc.jxc.Lexem;
+import org.lqc.jxc.transform.TreeVisitor;
 
 public class InstrList extends Instruction {
 	

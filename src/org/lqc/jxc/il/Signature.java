@@ -20,7 +20,7 @@ public class Signature<T extends Type> {
 		Type rt = JType.toILType(m.getReturnType());
 		Vector<Type> args = new Vector<Type>();
 		
-		for(Class cls : m.getParameterTypes()) {
+		for(Class<?> cls : m.getParameterTypes()) {
 			args.add(JType.toILType(cls));			
 		}
 		
@@ -29,5 +29,22 @@ public class Signature<T extends Type> {
 	
 	public String toString() {
 		return name + ": " + type.toString();
+	}
+	
+	@Override
+	public int hashCode() {
+		return name.hashCode();
+	}
+	
+	@Override
+	public boolean equals(Object o) {
+		if(! (o instanceof Signature)) {
+			return false;
+		}
+		
+		Signature<? extends Type> sig = (Signature<? extends Type>)o;
+
+		return name.equals(sig.name) && type.equals(sig.type);
+		
 	}
 }

@@ -31,5 +31,10 @@ public class IntegerType extends RealType {
 			return Relation.NONCOMPARABLE;			
 		}		
 	}
-
+	
+	public String getShorthand() 
+	{
+		return "I";
+	}
+	
 }

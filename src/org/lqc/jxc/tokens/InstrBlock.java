@@ -4,6 +4,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Vector;
 
+import org.lqc.jxc.transform.TreeVisitor;
+
 public class InstrBlock extends InstrList {
 	
 	public InstrBlock(int l, int c, List<Instruction> ilist) {
@@ -14,9 +16,7 @@ public class InstrBlock extends InstrList {
 	public InstrBlock() {
 		super(-1, -1);
 		this.instructions = new Vector<Instruction>();
-	}
-
-	protected List<Instruction> instructions;
+	}	
 	
 	@Override
 	public void visitNode(TreeVisitor v) {
@@ -25,5 +25,9 @@ public class InstrBlock extends InstrList {
 	
 	public Iterator<Instruction> iterator() {				
 		return instructions.iterator();
+	}
+	
+	public Instruction getLast() {
+		return instructions.get(instructions.size()-1);
 	}
 }

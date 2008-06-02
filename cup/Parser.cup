@@ -9,6 +9,7 @@ import org.lqc.util.PathID;
 
 import java.util.List;
 import java.util.Vector;
+import java.util.Collections;
 
 parser code {:
 	
@@ -27,7 +28,7 @@ parser code {:
 :};
 
 /* Some terminal signs */
-terminal SEMI, COLON, DOT;
+terminal SEMI, COMMA, DOT;
 terminal LPAR, RPAR;
 terminal LCURLY, RCURLY;
 terminal EQUAL, EQEQ, NEQEQ;
@@ -36,6 +37,8 @@ terminal PLUS, MINUS, TIMES, DIVIDE, MODULO;
 terminal NEG, UPLUS, UMINUS, PLUSPLUS, MINUSMINUS;
 
 terminal LOGOR, LOGAND;
+
+terminal FUN, RARROW, HASH;
 
 terminal Integer INT;
 terminal Double REAL;
@@ -53,20 +56,22 @@ terminal DEFINES;
 terminal IMPLEMENTS;
 terminal IMPORT; 
 
-terminal Type TYPE;
+/** TYPE lexems **/
+terminal Type PTYPE; /* primitive type */
+non terminal Type type; /* type expression */
+non terminal List<Type> type_list; /* list of types */
 
-non terminal ConstantExpr constant;
 
-non terminal PathID path; 
+/** Path ID **/
+non terminal PathID path;
 
+/** IMPORTS **/
 non terminal ImportStmt import_stmt;
 non terminal List<ImportStmt> import_list;
 
-/* Function lists */
+/** LIST OF FUNCTIONS */
 non terminal CompileUnit prog;
-/* non terminal List<FunctionSign> func_sig_list; */
 non terminal List<FunctionDecl> func_list; 
-/* non terminal FunctionSign func_sig; */
 non terminal FunctionDecl func_decl;
 
 /* Argument lists */
@@ -74,27 +79,31 @@ non terminal List<ArgumentDecl> arg_dlist;
 non terminal List<ArgumentDecl> arg_dlist_ne;
 non terminal ArgumentDecl arg_decl;
 
+/** INSTRUCTIONS **/
 non terminal List<Instruction> instr_list;
 non terminal Instruction instr;
 non terminal InstrBlock complex_instr;
-
-
-non terminal InstrList var_decl;
-non terminal List<Pair<String,Expression>> declarator_list;
-non terminal Pair<String,Expression> declarator;
-
-non terminal Expression expr;
-non terminal Expression bool_expr_or, bool_expr_and, bool_expr_cmp, bool_expr_rel; 
-non terminal Expression num_expr_add, num_expr_mul, unary_expr, simple_expr;
-non terminal Expression assign_expr;
-
-non terminal TypeCast type_cast;
-
-non terminal List<Expression> expr_list;
-
 non terminal CondInstr cond_instr;
 non terminal LoopInstr loop_instr;
 non terminal ReturnInstr return_instr;
+
+/** Variable declaration **/
+non terminal InstrList var_decl;
+non terminal List<Pair<String,ExprToken<? extends Type>>> declarator_list;
+non terminal Pair<String,ExprToken<? extends Type>> declarator;
+
+
+/** EXPRESSIONS **/
+non terminal ExprToken<? extends Type> expr;
+non terminal ExprToken<? extends Type> bool_expr_or, bool_expr_and, bool_expr_cmp, bool_expr_rel; 
+non terminal ExprToken<? extends Type> num_expr_add, num_expr_mul, unary_expr, simple_expr;
+non terminal ExprToken<? extends Type> assign_expr;
+non terminal ConstantExpr constant;
+non terminal TypeCast type_cast;
+non terminal List<ExprToken<? extends Type>> expr_list;
+
+/** Lambda expression **/
+non terminal LambdaExpr lambda_expr;
 
 precedence left PLUS, MINUS;
 precedence left TIMES, DIVIDE, MODULO;
@@ -127,16 +136,16 @@ func_list ::= func_list:fl func_decl:fd {:
 arg_dlist ::= arg_dlist_ne:al {: RESULT = al; :} | 
 						      {: RESULT = new Vector<ArgumentDecl>(); :}; 
 						      
-arg_dlist_ne ::= arg_dlist_ne:al COLON arg_decl:arg	{: al.add(arg); RESULT = al; :} | 
+arg_dlist_ne ::= arg_dlist_ne:al COMMA arg_decl:arg	{: al.add(arg); RESULT = al; :} | 
 				 arg_decl:arg {: RESULT = new Vector<ArgumentDecl>(); 
 				                 RESULT.add(arg); 
 				              :};
 
 
-arg_decl ::= TYPE:type ID:id {: RESULT = new ArgumentDecl(typeleft, typeright, type, id); :};
+arg_decl ::= type:t ID:id {: RESULT = new ArgumentDecl(tleft, tright, t, id); :};
 
 /* Function Implementation */
-func_decl ::= TYPE:rt ID:fid LPAR arg_dlist:args RPAR complex_instr:ci {:							
+func_decl ::= type:rt ID:fid LPAR arg_dlist:args RPAR complex_instr:ci {:							
 				RESULT = new FunctionDecl(rtleft, rtright, fid, rt, args, ci);
 :};
 
@@ -161,7 +170,7 @@ instr_list ::= instr:i {:
 			   				ilist.add(x);
 			   		}
 			   		RESULT = ilist; 
-			   		:}			   
+			   		:}			   		   
 ;
 
 instr ::= complex_instr:ci {: RESULT = ci; :} |		  
@@ -200,7 +209,7 @@ loop_instr ::= WHILE:op LPAR expr:e RPAR instr:i {:
 			  :}
 ;
 
-return_instr ::= RETURN:ret SEMI {: RESULT = new ReturnInstr(retleft, retright, Expression.VOID); :} |
+return_instr ::= RETURN:ret SEMI {: RESULT = new ReturnInstr(retleft, retright, ExprToken.VOID); :} |
 				 RETURN:ret expr:e SEMI {: RESULT = new ReturnInstr(retleft, retright,e); :}
 ;
 
@@ -210,9 +219,9 @@ complex_instr ::= LCURLY:s instr_list:ilist RCURLY {:
 ;
 
 /** Variable declaration instruction **/
-var_decl ::= TYPE:t declarator_list:dlist {:
+var_decl ::= type:t declarator_list:dlist {:
 			InstrList il = new InstrList(tleft, tright); 					
-			for(Pair<String, Expression> decl : dlist) {
+			for(Pair<String, ExprToken<? extends Type>> decl : dlist) {
 				il.add( new VarDecl(tleft, tright, t, decl.first(), decl.second()));
 			};
 			RESULT = il; 
@@ -220,18 +229,18 @@ var_decl ::= TYPE:t declarator_list:dlist {:
 ;
 
 declarator_list ::= declarator:d {: 
-					    RESULT = new Vector<Pair<String,Expression>>();
+					    RESULT = new Vector<Pair<String,ExprToken<? extends Type>>>();
 					    RESULT.add(d); :} |
-					declarator_list:dlist COLON declarator:d {:
+					declarator_list:dlist COMMA declarator:d {:
 					    dlist.add(d);
 					    RESULT = dlist; :}
 ;
 
 declarator ::= ID:id {: 
-					RESULT = new Pair<String,Expression>(id, Expression.NULL); 
+					RESULT = new Pair<String,ExprToken<? extends Type>>(id, ExprToken.NULL); 
 					 :} |
 			   ID:id EQUAL expr:e {: 
-			        RESULT = new Pair<String,Expression>(id, e);
+			        RESULT = new Pair<String,ExprToken<? extends Type>>(id, e);
 			        :}
 ;
 
@@ -301,16 +310,17 @@ simple_expr ::= path:id {: RESULT = new VarExpr(idleft, idright, id); :} |
                      RESULT = new FunctionCall(idleft, idright, id); :} |
                 LPAR expr:e RPAR {: RESULT = e; :} |                
                 constant:c {: RESULT = c; :} |
-                type_cast:e {: RESULT = e; :}
+                type_cast:e {: RESULT = e; :} |
+                lambda_expr:le {: RESULT = le; :}                
 ;     
 
-type_cast ::= LPAR TYPE:t RPAR simple_expr:e {:
+type_cast ::= LPAR type:t RPAR simple_expr:e {:
 					RESULT = new TypeCast(tleft, tright, e, t); :};
 
 expr_list ::= expr:e {: 
-				RESULT = new Vector<Expression>(); 
+				RESULT = new Vector<ExprToken<? extends Type>>(); 
 				RESULT.add(e); :} |
-			  expr_list:elist COLON expr:e {:
+			  expr_list:elist COMMA expr:e {:
 			    elist.add(e);
 			    RESULT = elist; :}
 ;
@@ -322,4 +332,28 @@ path ::= ID:i {: RESULT = new PathID(i); :} |
 constant ::= INT:e {: RESULT = new ConstantExpr(eleft, eright, e); :} | 
 			 REAL:e  {: RESULT = new ConstantExpr(eleft, eright, e); :} |
 			 STRING:e {: RESULT = new ConstantExpr(eleft, eright, e); :} |
-			 BOOLEAN:e {: RESULT = new ConstantExpr(eleft, eright, e); :};                        
+			 BOOLEAN:e {: RESULT = new ConstantExpr(eleft, eright, e); :};
+			 
+lambda_expr ::= 
+	/* lambda that yields nothing */
+	HASH:h LCURLY arg_dlist:args RARROW instr_list:il RCURLY 
+		{: RESULT = new LambdaExpr(hleft, hright, il, ExprToken.VOID, args); :}
+	/* lambda with instructions and a yield */    
+	| HASH:h LCURLY arg_dlist:args RARROW instr_list:il expr:e RCURLY 
+		{: RESULT = new LambdaExpr(hleft, hright, il, e, args); :}
+	| HASH:h LCURLY arg_dlist:args RARROW expr:e RCURLY 
+		{: RESULT = new LambdaExpr(hleft, hright, Collections.EMPTY_LIST, e, args); :}
+;
+			 
+			 
+/** TYPES **/
+type_list ::= type_list:tl COMMA type:t {: RESULT = tl; tl.add(t); :}
+			  | type:t {: RESULT = new Vector<Type>(); RESULT.add(t); :}
+			  | {: RESULT = new Vector<Type>(); :}
+;
+ 
+type ::= PTYPE:ptype 
+			{: RESULT = ptype; :} 
+	   | LCURLY type_list:argt RARROW type:rt RCURLY 
+	   		{: RESULT = new FunctionType(rt, argt); :}
+;                   

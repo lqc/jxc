@@ -14,4 +14,9 @@ class AnyType extends Type {
 				Relation.EQUAL);
 	}
 
+	@Override
+	public String getShorthand() {		
+		return "*";
+	}
+
 }

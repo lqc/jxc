@@ -3,6 +3,8 @@ package org.lqc.jxc.tokens;
 import java.util.List;
 import java.util.Vector;
 
+import org.lqc.jxc.transform.TreeVisitor;
+
 public class CompileUnit extends SyntaxTreeNode {
 
 	private List<FunctionDecl> functions;

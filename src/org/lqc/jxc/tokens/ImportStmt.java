@@ -1,5 +1,6 @@
 package org.lqc.jxc.tokens;
 
+import org.lqc.jxc.transform.TreeVisitor;
 import org.lqc.util.PathID;
 
 public final class ImportStmt extends SyntaxTreeNode {

@@ -9,8 +9,13 @@ class VoidType extends Type {
 		return "<void>";
 	}
 
-	public Relation compareTo(Type object) {
-		return (this.equals(object) ? Relation.EQUAL : Relation.NONCOMPARABLE);
+	public Relation compareTo(Type object) {		
+		return (object instanceof VoidType ? Relation.EQUAL : Relation.NONCOMPARABLE);
+	}
+
+	@Override
+	public String getShorthand() {
+		return "V";
 	}
 
 }

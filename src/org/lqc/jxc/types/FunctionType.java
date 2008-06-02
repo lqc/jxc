@@ -2,7 +2,11 @@ package org.lqc.jxc.types;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Vector;
 
+import org.lqc.jxc.CompilerException;
+import org.lqc.util.POUtil;
 import org.lqc.util.Relation;
 import org.lqc.util.Tuple;
 
@@ -23,7 +27,7 @@ public class FunctionType extends Type {
 
 	@Override
 	public String toString() {
-		StringBuffer bf = new StringBuffer("[func:");
+		StringBuffer bf = new StringBuffer("{");
 		if (argsType != null) {
 			Iterator<Type> i = argsType.iterator();
 			if(i.hasNext()) {	
@@ -38,7 +42,7 @@ public class FunctionType extends Type {
 		}
 		bf.append(" => ");
 		bf.append(returnType.toString());
-		bf.append("]");
+		bf.append("}");
 
 		return bf.toString();
 	}	
@@ -56,71 +60,9 @@ public class FunctionType extends Type {
 	}
 	
 
-	/** Function type is comparable with other function types and "any". *//* 
-	public boolean isComparable(Type x) 
-	{
-		if (x instanceof AnyType) return true;
-		
-		if (x instanceof FunctionType) {
-			FunctionType f = (FunctionType)x;
-			
-			 If return types are not comparable, then f !~ g 
-			if (!this.returnType.isComparable(f.returnType)) 
-				return false;
-			
-			if (this.getArity() != f.getArity())
-				return false;
-			
-			Iterator<Type> gi = this.argsType.iterator();
-			Iterator<Type> fi = f.argsType.iterator();
-			
-			 ( E(k) g.arg[k] !~ f.arg[k] ) => g !~ f 
-			while(gi.hasNext()) {
-				Type gt = gi.next();
-				Type ft = fi.next();
-				
-				if(! gt.isComparable(ft) ) 
-					return false;
-			}
-			
-			return true;		
-		}	
-		
-		return false;
-	}
-
-	public boolean isGreaterEqual(Type x) {
-		 any is greater then any function type 
-		if(x instanceof AnyType) return false;
-		
-		FunctionType f = (FunctionType)x;
-		
-		 let this = g;
-		 * (g.rt >= f.rt and FA(k) f.arg[k] >= g.arg[k])
-		 *  	=> f ~ g	 	
-		 
-		
-		 if g.rt > f.rt => f < g  
-		if(! this.returnType.isGreaterEqual(f.returnType) )
-			return false;
-		
-		Iterator<Type> gi = this.argsType.iterator();
-		Iterator<Type> fi = f.argsType.iterator();
-		
-		 ( E(k) g.arg[k] < f.arg[k] ) => g < f 
-		while(gi.hasNext()) {
-			Type gt = gi.next();
-			Type ft = fi.next();
-			
-			if(! gt.isGreaterEqual(ft) ) return false;
-		}
-		
-		return true;		
-	}*/
-
 	public Relation compareTo(Type t) {
-		//if(t instanceof FunctionType) 
-		//	return this.compareTo((FunctionType)t);
+		if(t instanceof FunctionType) 
+			return this.compareTo((FunctionType)t);
 		
 		return Relation.NONCOMPARABLE;	
 	}
@@ -139,5 +81,47 @@ public class FunctionType extends Type {
 			return Relation.LESSER;
 		
 		return Relation.NONCOMPARABLE;		
+	}
+	
+	public void correct(FunctionType t) {
+		Iterator<? extends Type> him = t.argsType.iterator(); 
+		Iterator<? extends Type> me = this.argsType.iterator();
+		
+		List<Type> newlist = new Vector<Type>();
+				
+		while(him.hasNext() && me.hasNext()) {
+			Type a = him.next();
+			Type b = me.next();
+			
+			Type c = POUtil.min(a, b);
+			if(c == null) {
+				throw new CompilerException("[FT] Trying to correct type with non-comparable");
+			}
+			
+			newlist.add(c);
+		}
+		
+		if(him.hasNext() || me.hasNext()) {
+			throw new CompilerException("[FT] Cannot correct type with type with diffrent arity");
+		}
+		
+		this.argsType = new Tuple<Type>(newlist);
+		
+		if(this.returnType.equals(Type.ANY))
+			this.returnType = t.returnType;
+		else 
+			this.returnType = POUtil.max(t.returnType, this.returnType);
+	}
+	
+	public String getShorthand() 
+	{
+		StringBuffer b = new StringBuffer();
+		b.append("Cq");
+		for(Type t : argsType)
+			b.append(t.getShorthand());
+		b.append("w");
+		b.append(returnType.getShorthand());
+		b.append("e");		
+		return b.toString();
 	}
 }

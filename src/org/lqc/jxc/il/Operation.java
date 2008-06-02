@@ -1,5 +1,6 @@
 package org.lqc.jxc.il;
 
+import org.lqc.jxc.transform.ILVisitor;
 import org.lqc.util.TriStateLogic;
 
 public abstract class Operation {
@@ -22,4 +23,15 @@ public abstract class Operation {
 	public boolean isNop() {
 		return (this instanceof Nop);
 	}
+	
+	public abstract <T> void visit(ILVisitor<T> v);
+
+	public TriStateLogic isReachable() {
+		return reachable;
+	}
+	
+	public void setReachable(TriStateLogic reachable) {
+		this.reachable = reachable;
+	}
+		
 }

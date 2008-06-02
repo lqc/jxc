@@ -1,5 +1,7 @@
 package org.lqc.jxc.tokens;
 
+import org.lqc.jxc.transform.TreeVisitor;
+
 
 public class EmptyInstruction extends Instruction {
 

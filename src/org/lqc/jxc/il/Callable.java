@@ -3,9 +3,13 @@ package org.lqc.jxc.il;
 import org.lqc.jxc.types.FunctionType;
 
 public interface Callable {
+		
+	public Signature<FunctionType> declSignature();	
+	public Signature<FunctionType> callSignature();
 	
-	/* don't know yet */
-	public Signature<FunctionType> callSignature();	
-	public StaticContainer container();
+	public Klass container();
+	
+	public boolean isStatic();
+	public boolean isAbstract();
 
 }

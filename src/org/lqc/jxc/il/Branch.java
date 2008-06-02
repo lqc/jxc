@@ -1,9 +1,12 @@
 package org.lqc.jxc.il;
 
+import org.lqc.jxc.transform.ILVisitor;
+import org.lqc.jxc.types.Type;
+
 public class Branch extends Operation {
 	
 	public Branch(StaticContainer cont, int line, 
-			Expression c, Operation a, Operation b) {
+			Expression<? extends Type> c, Operation a, Operation b) {
 		super(cont, line);
 		
 		condition = c;
@@ -12,7 +15,7 @@ public class Branch extends Operation {
 	}
 
 	/** Branch condition. */
-	protected Expression condition;
+	protected Expression<? extends Type> condition;
 	
 	/** Branch A. */
 	protected Operation opA;
@@ -23,7 +26,7 @@ public class Branch extends Operation {
 	/**
 	 * @return the condition
 	 */
-	public Expression getCondition() {
+	public Expression<? extends Type> getCondition() {
 		return condition;
 	}
 
@@ -40,4 +43,9 @@ public class Branch extends Operation {
 	public Operation getOperationB() {
 		return opB;
 	}	
+	
+	@Override
+	public <T> void visit(ILVisitor<T> v) {
+		v.process(this);		
+	}
 }

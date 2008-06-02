@@ -7,15 +7,17 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.util.Collection;
 import java.util.Map;
 
 import java_cup.runtime.Symbol;
 
-import org.lqc.jxc.il.Module;
+import org.lqc.jxc.il.Klass;
 import org.lqc.jxc.javavm.IL2Jasmin;
 import org.lqc.jxc.tokens.CompileUnit;
 import org.lqc.jxc.transform.AST2IL;
 import org.lqc.jxc.transform.ExternalContext;
+import org.lqc.jxc.transform.ILFlowAnalyzer;
 import org.lqc.jxc.transform.ScopeAnalyzer;
 
 
@@ -60,18 +62,7 @@ public class JxCompiler {
 			/* Extract the program node */
 			CompileUnit cu = (CompileUnit)root.value;			
 			cu.setName(fname);						
-			
-			//System.out.println("Loading libraries...");
-			//Vector<URL> paths = new Vector<URL>();
-			//paths.add( new URL("file://./") );
-			//paths.add( new URL("file://e:\\workspaces\\mimuw\\jxlib\\bin\\") );
-			//URLClassLoader cls = new URLClassLoader(paths.toArray(new URL[0]));
-			//ClassLoader cls = ClassLoader.getSystemClassLoader();
-			
-			//Module sysm = new Module(cls.loadClass("lang.jx.System"));
-			//ExternalContext sysctx = new ExternalContext(null, sysm);
-			/* TODO: Resolve imports here */
-						
+												
 			/* Visibility and type checking */
 			System.out.println("Type checking...");		
 			ScopeAnalyzer scope = new ScopeAnalyzer(); 
@@ -81,27 +72,27 @@ public class JxCompiler {
 			
 			/* Transform to high-level IL. Single CU yields a module. */
 			System.out.println("Converting to IL...");
-			Module m = AST2IL.convert(cu, exts.values());
+			Collection<Klass> klist = AST2IL.convert(cu, exts.values());
 						
 			/* TODO: flow analysis */
-			//ControlFlowAnalyzer cfa = new ControlFlowAnalyzer();
-			//p.visitNode(cfa);
-						 
-			//for(CompilerWarning w : cfa.getWarnings()) {
-			//	System.out.println(w.getMessage());
-			//}
-						
-			/* generate Jasmin from IL Tree */
-			FileOutputStream s;
+			for(Klass klass : klist) {				
+				ILFlowAnalyzer ilfa = new ILFlowAnalyzer();
+				
+				ilfa.analyze(klass);
+							
+				/* generate Jasmin from IL Tree */
+				FileOutputStream s;
+				out = new File(klass.getModuleName() + ".j");
 			
-			System.out.println("Generating Jasmin...");
-			IL2Jasmin conv = new IL2Jasmin(
+				System.out.println("Generating Jasmin for klass: " + klass);
+				IL2Jasmin conv = new IL2Jasmin(
 					new PrintStream(
 					s = new FileOutputStream(out)) );
 			
-			conv.emmit(m);
-			s.close();							
-			
+				conv.emmit(klass);
+				s.close();
+			}			
+				
 		} catch(FileNotFoundException e) {
 			System.out.printf("[Error] Input file '%s' not found.", in.getPath());
 			retcode = 1;

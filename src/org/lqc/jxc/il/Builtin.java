@@ -15,11 +15,15 @@ public class Builtin implements Callable {
 		this.branchTempl = branchTempl;
 	}
 
+	public Signature<FunctionType> declSignature() {
+		return signature;
+	}
+	
 	public Signature<FunctionType> callSignature() {
 		return signature;
 	}
 
-	public StaticContainer container() {
+	public Klass container() {
 		return null;
 	}
 
@@ -36,5 +40,15 @@ public class Builtin implements Callable {
 	public String getBranchTemplate() {
 		return branchTempl;
 	}
+
+	public boolean isAbstract() {
+		return false;
+	}
+
+	public boolean isStatic() {
+		return true;		
+	}
+
+	
 
 }

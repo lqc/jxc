@@ -4,18 +4,20 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Vector;
 
+import org.lqc.jxc.transform.ILVisitor;
+
 /**
  * 
  * Groups operations.
  *
  */
-public class CompoundOperation 
+public class Block 
 	extends Operation implements Iterable<Operation> {
 	
 	/** Operations. */
 	protected List<Operation> operations;
 	
-	public CompoundOperation(StaticContainer c, int line) {
+	public Block(StaticContainer c, int line) {
 		super(c, line);
 		
 		operations = new Vector<Operation>();
@@ -38,6 +40,11 @@ public class CompoundOperation
 		}
 		
 		return true;
+	}
+	
+	@Override
+	public <T> void visit(ILVisitor<T> v) {
+		v.process(this);					
 	}
 
 }

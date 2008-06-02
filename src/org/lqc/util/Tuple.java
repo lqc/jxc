@@ -2,13 +2,11 @@ package org.lqc.util;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 
-public class Tuple<T extends PartiallyOrdered<T>> 
-	implements PartiallyOrdered<Tuple<T>>,
+public class Tuple<T extends PartiallyOrdered<? super T>> 
+	implements PartiallyOrdered<Tuple<? extends T>>,
 				Iterable<T>
-
 {
 	
 	private ArrayList<T> tuple;
@@ -25,7 +23,7 @@ public class Tuple<T extends PartiallyOrdered<T>>
 		tuple.addAll(col);
 	}
 
-	public Relation compareTo(Tuple<T> other) {
+	public Relation compareTo(Tuple<? extends T> other) {
 		Relation c = Relation.EQUAL;
 		
 		if(other.tuple.size() != this.tuple.size())

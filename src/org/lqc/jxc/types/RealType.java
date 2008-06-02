@@ -33,4 +33,10 @@ public class RealType extends PrimitiveType {
 		}		
 	}
 
+
+	@Override
+	public String getShorthand() {
+		return "R";
+	}
+
 }
