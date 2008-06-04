@@ -3,7 +3,7 @@ package org.lqc.jxc.il;
 import org.lqc.jxc.types.Type;
 import org.lqc.util.TriStateLogic;
 
-public class Variable {
+public class Variable<C extends StaticContainer<C>> {
 	
 	private static long __nextID = 1L;	
 	private static long getNextID() {
@@ -14,10 +14,10 @@ public class Variable {
 	protected long globalID; 
 		
 	/** Context of this variable. */
-	protected StaticContainer slink;
+	protected C slink;
 	
 	/** Variables signature. */
-	protected Signature<Type> signature;	
+	protected Signature<? extends Type> signature;	
 	
 	/** Is this variable written to. */
 	protected TriStateLogic write;
@@ -33,23 +33,30 @@ public class Variable {
 		return this.localID;
 	}
 	
-	public Variable(StaticContainer container, 
+	public Variable(C container, 
 			int localID,
-			Signature<Type> sig)
+			Signature<? extends Type> sig)
 	{
 		this();
 		
 		slink = container;
 		signature = sig;
 		this.localID = localID;
+		
+		this.read = TriStateLogic.FALSE;
+		this.write = TriStateLogic.FALSE;
 	}
 	
-	public Signature<Type> getSignature() {
+	public Signature<? extends Type> getSignature() {
 		return signature;
 	}
 	
 	public String toString() {
 		return signature.toString();
 	}
+	
+	public C slink() {
+		return slink;
+	}	
 			
 }

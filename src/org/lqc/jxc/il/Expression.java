@@ -2,10 +2,10 @@ package org.lqc.jxc.il;
 
 import org.lqc.jxc.types.Type;
 
-public abstract class Expression<T extends Type> extends Operation 
+public abstract class Expression<T extends Type> extends Operation
 {
 	
-	public Expression(StaticContainer cont, int line, T t) {
+	public Expression(StaticContainer<?> cont, int line, T t) {
 		super(cont, line);
 		
 		type = t;

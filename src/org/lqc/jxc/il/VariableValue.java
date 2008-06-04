@@ -6,15 +6,15 @@ import org.lqc.jxc.types.Type;
 
 public class VariableValue extends Expression<Type> 
 {	
-	protected Variable reference;
+	protected Variable<?> reference;
 	
-	public VariableValue(StaticContainer cont, int line, Variable v)
+	public VariableValue(StaticContainer<?> cont, int line, Variable<?> v)
 	{
 		super(cont, line, v.signature.type);	
 		reference = v;
 	}
 	
-	public Variable reference() {
+	public Variable<?> reference() {
 		return reference;
 	}
 	

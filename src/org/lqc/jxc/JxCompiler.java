@@ -82,7 +82,7 @@ public class JxCompiler {
 							
 				/* generate Jasmin from IL Tree */
 				FileOutputStream s;
-				out = new File(klass.getModuleName() + ".j");
+				out = new File(klass.getKlassName() + ".j");
 			
 				System.out.println("Generating Jasmin for klass: " + klass);
 				IL2Jasmin conv = new IL2Jasmin(

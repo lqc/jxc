@@ -6,21 +6,21 @@ import org.lqc.jxc.types.Type;
 
 public class Assignment extends Expression<Type> {
 	
-	public Assignment(StaticContainer cont, int line, 
-			Variable t, Expression<? extends Type> e) {
+	public Assignment(StaticContainer<?> cont, int line, 
+			Variable<?> t, Expression<? extends Type> e) {
 		super(cont, line, e.type);
 		
 		target = t;
 		argument = e;
 	}
 	
-	protected Variable target;
+	protected Variable<?> target;
 	protected Expression<? extends Type> argument;
 	
 	/**
 	 * @return the target
 	 */
-	public Variable getTarget() {
+	public Variable<?> getTarget() {
 		return target;
 	}
 	/**

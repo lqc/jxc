@@ -12,13 +12,14 @@ import java.util.Vector;
 import org.lqc.jxc.javavm.JType;
 import org.lqc.jxc.transform.ILVisitor;
 import org.lqc.jxc.types.FunctionType;
+import org.lqc.jxc.types.KlassType;
 import org.lqc.jxc.types.Type;
+import org.lqc.util.TriStateLogic;
 
 /** Definition of a standalone function. */
-public class Function implements StaticContainer, Callable,
+public class Function implements StaticContainer<Function>, Callable,
 	Iterable<Operation>
-{
-	
+{	
 	/** Function declared signature. */
 	protected Signature<FunctionType> signature;
 	
@@ -26,16 +27,16 @@ public class Function implements StaticContainer, Callable,
 	protected List<Type> catypes;
 		
 	/** List of local variables. */
-	protected ArrayList<Variable> localVars;
+	protected ArrayList<Variable<?>> localVars;
 	
 	/** localID to address map. */
 	protected int[] lvmap;
 	
 	/** Variable mapping. */
-	protected Map<Signature<Type>, Integer> vmap;
+	protected Map<Signature<? extends Type>, Integer> vmap;
 	
 	/** Argument mapping. Need for calls. */
-	protected Map<Signature<Type>, Integer> amap;		
+	protected Map<Signature<? extends Type>, Integer> amap;		
 				
 	/** List of instructions. */
 	protected List<Operation> ops;
@@ -49,11 +50,19 @@ public class Function implements StaticContainer, Callable,
 	/** Is this an abstract function definition. */
 	protected boolean isStatic;
 	
+	/** Is this function declared inside some other funciton 
+	 * and thus needs local variable translation. */
+	protected boolean isLambda;
+	
 	/** Source line of declaration */
 	protected int line;
 	
 	/** Identifier of last added variable */
 	private int _lastID = -1;
+	
+	/** Frame for exported/non-local variables. */
+	protected Frame frame;
+	protected Variable<?> callFrameVar;
 	
 	private int genLUID() {
 		return ++_lastID;
@@ -61,7 +70,7 @@ public class Function implements StaticContainer, Callable,
 					
 	public Function(Klass container,
 			int line, Signature<FunctionType> sig,
-			boolean abs, boolean stat)
+			boolean abs, boolean stat, boolean lambda)
 	{		
 		slink = container;
 		signature = sig;
@@ -69,18 +78,26 @@ public class Function implements StaticContainer, Callable,
 		
 		this.line = line;
 				
-		vmap = new HashMap<Signature<Type>, Integer>();
-		amap = new HashMap<Signature<Type>, Integer>();
+		vmap = new HashMap<Signature<? extends Type>, Integer>();
+		amap = new HashMap<Signature<? extends Type>, Integer>();
 		
-		localVars = new ArrayList<Variable>();		
+		localVars = new ArrayList<Variable<?>>();		
 		ops = new Vector<Operation>();
 		
+		frame = new Frame(this);
+			
+		this.callFrameVar = this.newVar(
+			new Signature<KlassType>("_" + sig.name + "_frame", frame.getType()), true);
+				
 		this.isAbstract = abs;
 		this.isStatic = stat;
+		this.isLambda = lambda;		
+
 	}
 	
-	public Variable newArg(Signature<Type> signature) {
-		Variable v = new Variable(this, genLUID(), signature);
+	public Variable<Function> newArg(Signature<? extends Type> signature) 
+	{
+		Variable<Function> v = new Variable<Function>(this, genLUID(), signature);
 		
 		localVars.add(v.localID, v);
 		
@@ -92,11 +109,19 @@ public class Function implements StaticContainer, Callable,
 		return v;
 	}
 	
-	public Variable newVar(Signature<Type> signature) {
-		Variable v = new Variable(this, genLUID(), signature);
+	public Variable<?> newVar(Signature<? extends Type> signature, boolean islocal) 
+	{		
+		Variable<?> v;
 		
-		localVars.add(v.localID, v);
-		vmap.put(signature, v.localID);
+		if(islocal) {
+			v = new Variable<Function>(this, genLUID(), signature);
+			localVars.add(v.localID, v);
+			vmap.put(signature, v.localID);
+		}
+		else {
+			v = frame.newInstanceVar(callFrameVar, signature, false);			
+		}
+		
 		return v;
 	}
 	
@@ -104,8 +129,16 @@ public class Function implements StaticContainer, Callable,
 		return slink.get(sig);		
 	}
 
-	public Variable get(Signature<Type> sig) {
-		Variable v = localVars.get(vmap.get(sig));
+	public Variable<?> get(Signature<Type> sig) 
+	{
+		Variable<?> v;
+		Integer idx = vmap.get(sig);
+		
+		if(idx != null)
+			v = localVars.get(vmap.get(sig));
+		else
+			v = frame.get(sig);
+		
 		if(v == null) 
 			return slink.get(sig);
 		
@@ -117,8 +150,8 @@ public class Function implements StaticContainer, Callable,
 		ops.add(op);
 	}
 
-	public Function newFunc(int line, Signature<FunctionType> t) {
-		return this.slink.newFunc(line, t);
+	public Function newFunc(int line, Signature<FunctionType> t, boolean isstatic) {
+		return this.slink.newFunc(line, t, this.isStatic && isstatic);
 	}
 	
 	public void remove(Callable f) {
@@ -129,8 +162,13 @@ public class Function implements StaticContainer, Callable,
 		return Collections.EMPTY_LIST;
 	}
 
-	public Collection<Variable> allVariables() {
-		return localVars;		
+	public Collection<Variable<?>> allVariables() {
+		Collection<Variable<?>> copy = 
+			(Collection<Variable<?>>) localVars.clone();
+		
+		copy.addAll(frame.allVariables());
+		
+		return copy;		
 	}
 	
 	public Signature<FunctionType> declSignature() {
@@ -173,13 +211,24 @@ public class Function implements StaticContainer, Callable,
 	public int newLVMap() {
 		lvmap = new int[localVars.size()];
 		int k = 0;
-		int i = 0;
-		
-		for(Variable v : localVars) {
-			lvmap[i] = k;
-			i++;
+				
+		/* first parse arguments */
+		for(Variable<?> v : localVars) {
+			if(!amap.containsKey(v.signature)) continue;						
+			lvmap[v.localID] = k;
+			
 			k += JType.sizeof(v.getSignature().type);
 		}	
+		
+		/* then the local variables */
+		for(Variable<?> v : localVars) {
+			if(amap.containsKey(v.signature)) continue;
+			
+			// if(v.read.equals(TriStateLogic.FALSE)) continue;
+			
+			lvmap[v.localID] = k;			
+			k += JType.sizeof(v.getSignature().type);
+		}
 		
 		return k;
 	}	
@@ -222,5 +271,37 @@ public class Function implements StaticContainer, Callable,
 		return slink.getNearestKlass();
 	}
 
+	public static class Frame extends Klass {		
+		public Frame(Function f) {
+			super(Klass.forJavaClass(Object.class), produceName(f.absolutePath()));			
+		}			
+		
+		private static String produceName(String n) {
+			int i = n.lastIndexOf('/');
+			String base = n.substring(0, i);
+			String fname = n.substring(i+1);
+			
+			return base + "$" + "Frame_" + fname;			
+		}
+		
+		public boolean isEmpty() {
+			return this.vmap.isEmpty();
+		}
+	}
+
+	public Frame getFrame() {
+		return this.frame;		
+	}	
+	
+	public Variable<?> getCallFrameVar() {
+		return callFrameVar;
+	}
+
+	/**
+	 * @return the isLambda
+	 */
+	public boolean isLambda() {
+		return isLambda;
+	}
 	
 }

@@ -13,7 +13,7 @@ public class KlassType extends Type {
 
 	@Override
 	public String getShorthand() {
-		return "K" + klass.getModuleName() + "e";	
+		return "K" + klass.getKlassName() + "e";	
 	}
 
 	public Relation compareTo(Type object) {

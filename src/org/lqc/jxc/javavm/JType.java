@@ -91,6 +91,9 @@ public class JType {
 		if(t instanceof FunctionType) 
 			return refType("Closure" + t.getShorthand());
 		
+		if(t instanceof KlassType) 
+			return refType(((KlassType)t).getKlass().getKlassName());
+		
 		return refType("java.lang.Object");
 	}
 	

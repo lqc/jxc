@@ -79,7 +79,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 			Class<?> c = loader.loadClass(path.absoluteName());			
 			
 			ExternalContext x = 
-				new ExternalContext(parent, new Klass(c) );
+				new ExternalContext(parent, Klass.forJavaClass(c) );
 			
 			if(externals.containsKey(x.name))
 				throw new CompilerException("Duplicate import" +
@@ -152,15 +152,20 @@ public class ScopeAnalyzer implements TreeVisitor {
 	private VarDecl lookupVariable(PathID path)
 		throws ElementNotFoundException
 	{
-		return this.lookupVariable(current, path);		
+		return this.lookupVariable(current, current, path);		
 	}
 	
-	private VarDecl lookupVariable(Context c, PathID path)
+	private VarDecl lookupVariable(Context callee, Context c, PathID path)
 		throws ElementNotFoundException
 	{				
 		// if the path is relative to context 
-		if(path.isRelative())
-			return c.getVariable(path.basename());
+		if(path.isRelative()) {
+			VarDecl d = c.getVariable(path.basename());
+			if(!callee.equals(d.getStaticContext()) )
+				d.markNonLocalUsage();
+			
+			return d;			
+		}
 		
 		// if not then lookup the context
 		Pair<PathID, String> p = path.tailSplit();
@@ -170,7 +175,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 			Context x = lookupContext(c, p.first().absoluteName());
 			
 			if(x != null)
-				return lookupVariable(x, xpath);
+				return lookupVariable(callee, x, xpath);
 			
 			p = p.first().tailSplit();
 			xpath.prepend(p.second());
@@ -249,6 +254,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 	}
 	
 	public void visit(LambdaExpr lambda) {
+		lambda.bindStaticContext(current);
 		lambda.initInnerContext(lambda.getStaticContext());
 		push(lambda.innerContext());		
 
@@ -414,7 +420,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 				ref = lookupCallable(call.getFid(), alpha);				
 			} catch (ElementNotFoundException ex) {
 				throw new SyntaxErrorException(call, String.format(
-					"No match for '%s' with type '%s'\n", call.getFid(), alpha
+					"ScopeAnalyzer: No match for '%s' with type '%s'\n", call.getFid(), alpha
 							.toString()));
 			} catch (MultiplyMatchException ex) {
 				throw new SyntaxErrorException(call, "Disambigous call:"
@@ -430,7 +436,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 		for (int j = 0; j < call_args.size(); j++) {
 			ExprToken<? extends Type> e = typeCheck(call_args.get(j), 
 					ref.getType().getArgumentTypes().get(j), 
-					new CompilerException("Illegal implicit cast") );
+					new CompilerException("ScopeAnalyzer: Illegal implicit cast") );
 
 			call_args.set(j, e);
 		}
@@ -447,7 +453,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 			e.bindRef(d);
 		} catch (ElementNotFoundException exc) {
 			throw new SyntaxErrorException(e, String
-					.format("No match for variable '%s' in current scope.\n", e
+					.format("ScopeAnalyzer->VarExpr: No match for variable '%s' in current scope.\n", e
 							.getId()));
 		}
 	}
@@ -480,7 +486,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 
 			e = typeCheck(e, d.getType(),
 					new TypeCheckException(instr, String.format(
-							"Cannot assign expression of type '%s' to"
+							"ScopeAnalyzer->Assign: Cannot assign expression of type '%s' to"
 									+ " variable '%s' of type '%s'.", e
 									.getType().toString(), instr.getId(), d
 									.getType().toString())));
@@ -488,7 +494,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 
 		} catch (ElementNotFoundException e) {
 			throw new SyntaxErrorException(instr, String.format(
-					"No match for variable '%s' in current scope.\n", instr
+					"ScopeAnalyzer->Assign: No match for variable '%s' in current scope.\n", instr
 							.getId()));
 		}
 	}

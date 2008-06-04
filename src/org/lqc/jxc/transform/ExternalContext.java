@@ -18,7 +18,7 @@ public class ExternalContext extends Context {
 	public ExternalContext(Context parent, Klass m) 
 		
 	{
-		super(parent, m.getModuleName());
+		super(parent, m.getKlassName());
 		
 		try {
 			for(Callable c : m.allCallables())

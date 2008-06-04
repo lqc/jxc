@@ -5,11 +5,16 @@ import org.lqc.jxc.types.Type;
 
 public class Call extends Expression<Type> 
 {		
-	public Call(StaticContainer cont, int line, Callable target) {
-		this(cont, line, target, false);
-	}
 	
-	public Call(StaticContainer cont, int line, Callable target, boolean s)
+	public enum Proto {
+		VIRTUAL,
+		NONVIRTUAL,
+		STATIC,
+		CONSTR
+	}
+		
+	public Call(StaticContainer<?> cont, int line, Callable target, 
+			Proto p)
 	{
 		super(cont, line, target.callSignature().type.getReturnType());
 		
@@ -17,14 +22,14 @@ public class Call extends Expression<Type>
 		arguments = new Expression[target.callSignature().type.getArity()];
 		last = 0;
 		
-		isStatic = s;
+		proto = p;
 	}	
 	
 	protected Callable target;	
 	protected Expression<? extends Type>[] arguments;
 	
 	private int last;
-	protected boolean isStatic;
+	protected Proto proto;
 	
 	public void addArgument(Expression<? extends Type> e) {
 		arguments[last++] = e;		
@@ -41,5 +46,9 @@ public class Call extends Expression<Type>
 	@Override
 	public <T> void visit(ILVisitor<T> v) {
 		v.process(this);		
+	}
+	
+	public Proto protocol() {
+		return proto;
 	}
 }

@@ -1,20 +1,28 @@
 package org.lqc.jxc.il;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Vector;
 
-import org.lqc.jxc.javavm.FunctionAnnotation;
-import org.lqc.jxc.javavm.JVMBranch;
-import org.lqc.jxc.javavm.JVMPrimitive;
-import org.lqc.jxc.javavm.JxNoExport;
+import lang.jx.FunctionAnnotation;
+import lang.jx.JVMBranch;
+import lang.jx.JVMPrimitive;
+import lang.jx.JxNoExport;
+
+import org.lqc.jxc.javavm.JType;
 import org.lqc.jxc.transform.ILVisitor;
 import org.lqc.jxc.types.FunctionType;
 import org.lqc.jxc.types.KlassType;
 import org.lqc.jxc.types.Type;
 import org.lqc.jxc.types.TypeParser;
+
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 /** 
  * 
@@ -22,26 +30,46 @@ import org.lqc.jxc.types.TypeParser;
  *
  */
 public class Klass extends Expression<KlassType> 
-	implements StaticContainer 
-{
+	implements StaticContainer<Klass> 
+{	
+	private static final StaticContainer<?> NULL_CONTAINER = new NullContainer();
+					
+	protected String klassName;
+	protected Klass parentKlass;
+	protected List<String> implementsNames;
 	
-	private static final StaticContainer NULL_CONTAINER = new NullContainer();	
-		
-	protected String moduleName;
 	protected boolean isInterface;
+	protected boolean external;
 	
-	protected Map<Signature<Type>, Variable> vmap;
+	protected Map<Signature<? extends Type>, Variable<Klass>> vmap;
 	protected Map<Signature<FunctionType>, Callable> fmap;
-	
-	public <T> Klass(Class<T> cls) {
-		super(NULL_CONTAINER, -2, null);		
-		this.type = new KlassType(this);
 		
-		/* reconstruct module definition from class */
-		this.moduleName = cls.getName();		
+	public <T> Klass(Class<T> cls) {
+		super(NULL_CONTAINER, -2, null);
+		
+		this.type = new KlassType(this);
 		this.fmap = new HashMap<Signature<FunctionType>, Callable>();
 		
-		System.out.println("Importing " + moduleName);
+		/* reconstruct module definition from class */
+		this.klassName = cls.getName();
+		
+		getKlassCache().put(cls.getCanonicalName(), this);
+		
+		System.out.println("Importing " + klassName);
+		
+		
+		this.external = true;
+		
+		
+		if(cls.equals(Object.class)) {
+			this.parentKlass = this;		
+		}
+		else
+			this.parentKlass = Klass.forJavaClass(cls.getSuperclass());
+		
+		this.implementsNames = null;		
+		
+		
 		JxNoExport nex = cls.getAnnotation(JxNoExport.class);
 		if(nex != null) {
 			for(String s : nex.hidden_methods())
@@ -50,12 +78,15 @@ public class Klass extends Expression<KlassType>
 		
 		this.isInterface = cls.isInterface();
 		
-		for(Method m : cls.getMethods()) {
-			Signature<FunctionType> fsig;
-			Signature<Type>[] asigs;
+		for(Method m : cls.getDeclaredMethods()) 
+		{
+			// ommit private methods
+			if((m.getModifiers() & Modifier.PRIVATE) != 0)
+				continue;
+			
+			Signature<FunctionType> fsig;			
 									
 			FunctionAnnotation fa = m.getAnnotation(FunctionAnnotation.class);
-			 
 			JVMPrimitive pa = m.getAnnotation(JVMPrimitive.class);
 			JVMBranch ba = m.getAnnotation(JVMBranch.class);
 			
@@ -65,11 +96,7 @@ public class Klass extends Expression<KlassType>
 			}
 			else {
 				// if(pa != null || ba != null)
-					fsig = new Signature<FunctionType>(m);
-				/* {
-					System.out.println("Ommiting: " + m.getName());
-					continue; // ignore java native functions
-				} */
+				fsig = Klass.signFor(m);			
 			}			
 			
 			if(pa == null && ba != null) {				
@@ -85,10 +112,10 @@ public class Klass extends Expression<KlassType>
 				
 				this.fmap.put(fsig, new Builtin(fsig, pa.value(), bt) );
 				continue;
-			}
-											
+			}									
 						
-			Function f = this.newFunc(0, fsig);
+			Function f = this.newFunc(0, fsig, 
+				(m.getModifiers() & Modifier.STATIC) != 0);
 						
 			int i = 0;
 			for(Type t : fsig.type.getArgumentTypes()) { 
@@ -96,51 +123,124 @@ public class Klass extends Expression<KlassType>
 				i++;
 			}
 		}
+		
+		// add constructores 
+		for(Constructor<?> c : cls.getDeclaredConstructors())
+		{
+			if((c.getModifiers() & Modifier.PRIVATE) != 0)
+				continue;
+			
+			Signature<FunctionType> fsig = Klass.signFor(c);
+			Function f = this.newFunc(0, fsig, false);
+			
+			f.newArg( new Signature<KlassType>("_self", 
+					parentKlass.getType() ));
+			
+			int i = 0;
+			for(Type t : fsig.type.getArgumentTypes()) { 
+				f.newArg( new Signature<Type>("arg"+i, t) );
+				i++;
+			}			
+		}	
+		
+				
 	}
 	
+	private static Signature<FunctionType> signFor(java.lang.reflect.Method m) 
+	{		
+		Type rt = JType.toILType(m.getReturnType());
+		Vector<Type> args = new Vector<Type>();
+		
+		for(Class<?> cls : m.getParameterTypes()) {
+			args.add(JType.toILType(cls));			
+		}
+		return new Signature<FunctionType>(
+				m.getName(), new FunctionType(rt, args));
+	}
+	
+	private static Signature<FunctionType> 
+		signFor(java.lang.reflect.Constructor<?> m) 
+	{		
+		Vector<Type> args = new Vector<Type>();
+		for(Class<?> cls : m.getParameterTypes()) {
+			args.add(JType.toILType(cls));			
+		}
+
+		return new Signature<FunctionType>(
+				"<init>", new FunctionType(Type.VOID, args));
+	}
 	
 	public Klass(String name) {
-		this(name, false);	
+		this(name, false);
 	}
 	
-	public Klass(String name, boolean bool) {
+	public Klass(String name, boolean isinterface) {
+		this((isinterface ? 
+				forJavaClass(Object.class) : 
+				forJavaClass(lang.jx.Module.class) ), 
+				name, isinterface);
+	}
+	
+	public Klass(Klass base, String name) {
+		this(base, name, false);	
+	}
+	
+	public Klass(Klass base, String name, boolean bool) {
 		super(NULL_CONTAINER, -2, null);
 		this.type = new KlassType(this);
 		
-		this.moduleName = name;
+		this.klassName = name;
+		this.parentKlass = base;
+		this.implementsNames = new Vector<String>();
 		this.fmap = new HashMap<Signature<FunctionType>, Callable>();		
+		this.vmap = new HashMap<Signature<? extends Type>, Variable<Klass>>();
 		 
 		this.isInterface = bool;
+		this.external = false;		
 	}
 	
+	public Callable get(String name, Type rt, Type... args) {
+		return this.get( new Signature<FunctionType>(
+				name, new FunctionType(rt, args) ));		
+	}
+	
+	public Callable getLocal(String name, Type rt, Type... args) {
+		return this.getLocal( new Signature<FunctionType>(
+				name, new FunctionType(rt, args) ));		
+	}
+	
+	public Callable getLocal(Signature<FunctionType> sig) {
+		return fmap.get(sig);		
+	}
+		
 	public Callable get(Signature<FunctionType> sig) {
-		Callable f = fmap.get(sig);
-		if(f == null)
+		Callable f = getLocal(sig);		
+		if((f == null) && (slink != null))
 			return slink.get(sig);
 		
 		return f;
 	}
 
-	public Variable get(Signature<Type> sig) {
-		Variable v = vmap.get(sig);
+	public Variable<?> get(Signature<Type> sig) {
+		Variable<Klass> v = vmap.get(sig);
 		if(v == null)
 			return slink.get(sig);
 		
 		return v;
 	}
 
-	public StaticContainer container() {
+	public StaticContainer<?> container() {
 		return slink;
 	}
 	
-	public Function newFunc(int line, String n, FunctionType t) 
+	public Function newFunc(int line, String n, FunctionType t, boolean isstatic) 
 	{
-		return this.newFunc(line, new Signature<FunctionType>(n,t) );
+		return this.newFunc(line, new Signature<FunctionType>(n,t), isstatic );
 	}
 	
-	public Function newFunc(int line, Signature<FunctionType> t) {
+	public Function newFunc(int line, Signature<FunctionType> t, boolean isstatic) {
 		Function f = new Function(this, line, t, 
-				this.isInterface, !this.isInterface);
+				this.isInterface, isstatic && !this.isInterface, false);
 		fmap.put(t, f);
 		
 		return f;
@@ -149,16 +249,11 @@ public class Klass extends Expression<KlassType>
 	public void remove(Callable f) {
 		this.fmap.remove(f);
 	}
-
-	/** Identifier of last added variable */
-	private int _lastID = -1;
 	
-	private int genLUID() {
-		return ++_lastID;
-	}
-	
-	public Variable newVar(Signature<Type> t) {
-		Variable v = new Variable(this, genLUID(), t);
+	public Variable<Klass> newInstanceVar(Variable<?> instance,
+			Signature<? extends Type> t, boolean islocal) 
+	{
+		Variable<Klass> v = new KlassField(this, instance, t);
 		vmap.put(t, v);
 		return v;
 	}
@@ -166,16 +261,16 @@ public class Klass extends Expression<KlassType>
 	/**
 	 * @return the moduleName
 	 */
-	public String getModuleName() {
-		return moduleName;
+	public String getKlassName() {
+		return klassName;
 	}
 	
 	public Collection<Callable> allCallables() {
 		return fmap.values();
 	}
 
-	public Collection<Variable> allVariables() {
-		return vmap.values();
+	public Collection<Variable<?>> allVariables() {
+		return (Collection)vmap.values();
 	}
 	
 	private int _labelID = 0;
@@ -185,7 +280,7 @@ public class Klass extends Expression<KlassType>
 	}
 	
 	public String getUniqueLambdaName() {		
-		return moduleName + "$Lambda" + _labelID++;
+		return klassName + "$Lambda" + _labelID++;
 	};
 
 	public String absolutePath() {
@@ -197,27 +292,29 @@ public class Klass extends Expression<KlassType>
 	}
 
 	public String name() {
-		return this.moduleName;
+		return this.klassName;
 	}
 		
-	private static class NullContainer implements StaticContainer {
+	private static class NullContainer 
+			implements StaticContainer<NullContainer> 
+	{
 		public Function get(Signature<FunctionType> t) {				
 			return null;
 		}
 
-		public Variable get(Signature<Type> t) {			
+		public Variable<?> get(Signature<Type> t) {			
 			return null;
 		}
 
-		public StaticContainer container() {
+		public StaticContainer<?> container() {
 			return null;
 		}
 
-		public Function newFunc(int line, Signature<FunctionType> t) {
+		public Function newFunc(int line, Signature<FunctionType> t, boolean b) {
 			throw new UnsupportedOperationException();				
 		}
 
-		public Variable newVar(Signature<Type> t) {				
+		public Variable<NullContainer> newVar(Signature<? extends Type> t, boolean islocal) {				
 			throw new UnsupportedOperationException();
 		}
 
@@ -225,7 +322,7 @@ public class Klass extends Expression<KlassType>
 			return Collections.EMPTY_LIST;
 		}
 
-		public Collection<Variable> allVariables() {
+		public Collection<Variable<?>> allVariables() {
 			return Collections.EMPTY_LIST;
 		}
 
@@ -255,7 +352,7 @@ public class Klass extends Expression<KlassType>
 	}	
 	
 	public String toString() {
-		return this.getModuleName();
+		return this.getKlassName();
 	}
 
 
@@ -274,5 +371,54 @@ public class Klass extends Expression<KlassType>
 
 	public Klass getNearestKlass() {
 		return this;
+	}
+
+	/**
+	 * @return the parentKlassName
+	 */
+	public Klass getBaseKlass() {
+		return parentKlass;
 	}	
+	
+	public void addImplements(String klassName) {
+		this.implementsNames.add(klassName);
+	}
+	
+	public List<String> getImplementsNames() {
+		return this.implementsNames;
+	}
+	
+	private static HashMap<String, Klass> klass_cache;
+		
+	public static Map<String, Klass> getKlassCache() {
+		if(klass_cache == null) {
+			klass_cache = new HashMap<String, Klass>();					
+		}
+		
+		return klass_cache;		
+	}
+	
+	public static Klass forJavaClass(Class<?> cls) 
+	{			
+		Klass k = getKlassCache().get(cls.getCanonicalName());
+		
+		if(k == null) { 
+			k = new Klass(cls);
+			klass_cache.put(cls.getCanonicalName(), k);
+		}
+		
+		return k;		
+	}
+		
+	/**
+	 * @return the external
+	 */
+	public boolean isExternal() {
+		return external;
+	}
+
+	public Variable<Klass> newVar(Signature<? extends Type> t, boolean islocal) {
+		throw new NotImplementedException();
+	}	
+	
 }

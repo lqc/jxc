@@ -3,11 +3,14 @@ package org.lqc.jxc.tokens;
 import org.lqc.jxc.transform.TreeVisitor;
 import org.lqc.jxc.types.Type;
 
-public class VarDecl<T extends Type> extends Declaration<T> {	
+public class VarDecl<T extends Type> extends Declaration<T> {
+	
+	private boolean nonlocal; 
 
 	public VarDecl(int l, int c, T t, String id, ExprToken<? extends T> init) {
 		super(l, c, t, id);
 		initialValue = init;
+		nonlocal = false;
 	}
 	
 	public VarDecl(T t, String id) {
@@ -35,6 +38,14 @@ public class VarDecl<T extends Type> extends Declaration<T> {
 
 	public void setInitialValue(ExprToken<? extends T> e) {
 		this.initialValue = e;		
+	}
+	
+	public void markNonLocalUsage() {
+		nonlocal = true;
+	}
+	
+	public boolean isUsedNonLocally() {
+		return nonlocal;
 	}
 	
 	

@@ -82,7 +82,7 @@ public class ILFlowAnalyzer extends AbstractILVisitor<ILFlowAnalyzer.FlowContext
 	
 	public void analyze(Klass m) 
 	{
-		if(m.isInterface()) return;
+		if(m.isInterface() || m.isExternal()) return;
 		
 		for(Callable c : m.allCallables())
 		{
@@ -248,8 +248,12 @@ public class ILFlowAnalyzer extends AbstractILVisitor<ILFlowAnalyzer.FlowContext
 	public void process(VariableValue op) {
 		op.setReachable(current().accessState);
 		Info info = current().getVarInfo(op.reference());
-		info.read = current().accessState.or(info.read);
-		
+		if(info == null) {
+			System.out.println("Warning: " + op.reference().getSignature()
+					+ " not in varIinfoMap. ");
+			return;
+		}
+		info.read = current().accessState.or(info.read);		
 	}
 
 	@Override
@@ -263,8 +267,6 @@ public class ILFlowAnalyzer extends AbstractILVisitor<ILFlowAnalyzer.FlowContext
 	protected void leave(Block op) {
 		// TODO Auto-generated method stub		
 	}
-
-	
 
 	@Override
 	protected void enter(Function f) {
@@ -292,7 +294,7 @@ public class ILFlowAnalyzer extends AbstractILVisitor<ILFlowAnalyzer.FlowContext
 	}
 
 	public void process(Closure closure) {
-		closure.setReachable(current().accessState);		
+		closure.setReachable(current().accessState);				
 	}
 
 }
