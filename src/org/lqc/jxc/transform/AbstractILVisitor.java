@@ -2,6 +2,7 @@ package org.lqc.jxc.transform;
 
 import java.util.Stack;
 
+import org.lqc.jxc.CompilerException;
 import org.lqc.jxc.il.Assignment;
 import org.lqc.jxc.il.Block;
 import org.lqc.jxc.il.Branch;
@@ -91,8 +92,12 @@ public abstract class AbstractILVisitor<T> implements ILVisitor<T> {
 
 	public void process(Call op) {
 		enter(op);
-		for(Operation arg : op.args())
-			arg.visit(this);		
+		for(Operation arg : op.args()) {
+			if(arg == null)
+				throw new CompilerException("[INTERNAL] Call to " + op.target() + " from " +
+						op.target().container().getAbsoluteName() + " with unfilled argument.");
+			arg.visit(this);
+		}
 		leave(op);
 	}	
 

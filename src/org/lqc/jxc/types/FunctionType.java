@@ -40,7 +40,7 @@ public class FunctionType extends Type {
 				}
 			}			
 		}
-		bf.append(" => ");
+		bf.append(" -> ");
 		bf.append(returnType.toString());
 		bf.append("}");
 

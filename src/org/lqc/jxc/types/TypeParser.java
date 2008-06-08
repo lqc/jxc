@@ -24,7 +24,7 @@ public class TypeParser {
 	
 	private void accept(String x) {
 		if(!str.startsWith(x)) 
-			throw new RuntimeException("Parse error.");
+			throw new RuntimeException("Parse error at: " + x);
 		
 		move(x.length());
 		str = str.trim();		
@@ -48,7 +48,8 @@ public class TypeParser {
 	}
 	
 	private Type parseType() {
-		switch(next()) {
+		char tok;
+		switch(tok = next()) {
 			case '{':
 				return parseFunctionType();
 			case 'i':
@@ -71,14 +72,14 @@ public class TypeParser {
 			//	String s = yieldUntilSpace().substring(1);				
 			//	return parseObjectType();
 			default:
-				throw new RuntimeException("Type parse error");
+				throw new RuntimeException("Type parse error at: " + tok);
 		}		
 	}
 	
 	public List<Type> parseTypeList() {
 		Vector<Type> list = new Vector<Type>();		
 		
-		if(next() == '=') 
+		if( (next() == '-') || (next() == '}')) 
 			return list;
 				
 		list.add(parseType());
@@ -93,7 +94,7 @@ public class TypeParser {
 	private FunctionType parseFunctionType() {		
 		this.accept("{");
 		List<Type> args = this.parseTypeList();
-		this.accept("=>");
+		this.accept("->");
 		Type rt = this.parseType();
 		this.accept("}");
 		

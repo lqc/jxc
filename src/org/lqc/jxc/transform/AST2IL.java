@@ -20,6 +20,7 @@ import org.lqc.jxc.il.Expression;
 import org.lqc.jxc.il.Function;
 import org.lqc.jxc.il.Klass;
 import org.lqc.jxc.il.KlassField;
+import org.lqc.jxc.il.KlassFieldRef;
 import org.lqc.jxc.il.Loop;
 import org.lqc.jxc.il.Nop;
 import org.lqc.jxc.il.Operation;
@@ -55,7 +56,6 @@ import org.lqc.jxc.tokens.TypeCast;
 import org.lqc.jxc.tokens.VarDecl;
 import org.lqc.jxc.tokens.VarExpr;
 import org.lqc.jxc.types.FunctionType;
-import org.lqc.jxc.types.KlassType;
 import org.lqc.jxc.types.Type;
 
 
@@ -66,12 +66,14 @@ public class AST2IL implements TreeVisitor {
 		public StaticContainer<?> owner;
 		public Queue<Operation> ops;
 		public Stack<Expression<? extends Type>> estack;
+		public Map<Variable<?>, KlassField> remap; 
 		
 		public Frame(StaticContainer<?> owner) {
 			this.owner = owner;
 			
 			this.ops = new LinkedList<Operation>();
 			this.estack = new Stack<Expression<? extends Type>>();
+			this.remap = new HashMap<Variable<?>, KlassField>();
 		}		
 	}
 		
@@ -126,11 +128,6 @@ public class AST2IL implements TreeVisitor {
 	private Expression<? extends Type> peekExpr() {
 		return xstack.peek().estack.peek();
 	}
-	
-	private Signature<FunctionType> sigFor(FunctionDecl f) {
-		return	new Signature<FunctionType>(
-				f.getLocalID(), f.getType());		
-	}
 		
 	private void pickupExpr() {
 		if(hasExpr()) {			 
@@ -181,7 +178,8 @@ public class AST2IL implements TreeVisitor {
 								
 			for(ArgumentDecl ad : fd.getArgs()) {
 				f.newArg(new Signature<Type>(
-						ad.getLocalID(), ad.getType()) );				
+						ad.getLocalID(), ad.getType()),
+						!ad.isUsedNonLocally() );				
 			}
 			
 			fmap.put(fd, f);			
@@ -194,10 +192,61 @@ public class AST2IL implements TreeVisitor {
 		xstack.pop();		
 	}
 
+	private void initCallFrame(int line, Function.Frame cframe) 
+	{
+		Function f = (Function)cframe.container();
+		kmap.put(cframe.getKlassName(), cframe);
+								
+		/* create constructor */
+		Function constr = cframe.newFunc(0,
+				"<init>", new FunctionType(Type.VOID), false );
+			
+		Variable<?> _cself = constr.getSelf();					
+			
+		Klass objklass = cframe.getBaseKlass();
+		Callable supconstr = objklass.get("<init>", Type.VOID);
+							
+		Call call;
+		
+		/* put super invokation into the constructor */
+		constr.addOp( call = new Call(constr, 1, 
+				supconstr, Call.Proto.NONVIRTUAL) );
+		
+		call.addArgument( new VariableValue(constr, 1, _cself) );
+		constr.addOp( new ReturnVoid(constr, 1) );
+			
+		/* invoke constructor */
+		f.addOp(
+			new Assignment(f, line, f.getCallFrameVar(),
+					call = new Call(f, line, constr, Call.Proto.CONSTR) 
+				)
+			);				
+			
+		/* create the frame before call */				
+		call.addArgument( 
+			new CreateObject(f, line, cframe.getType()) 
+		);
+
+		// now our frame is ready
+		// we need to initialize it with values
+		// of non-local arguments
+		for(Variable<?> proxy : f.allVariables())
+		{
+			Variable<?> real = f.unproxy(proxy);
+
+			if(real == null) 
+				continue;
+
+			f.addOp( new Assignment(f, line, real,
+					new VariableValue(f, line, proxy))
+			);							 
+		}		
+	}
+	
 	public void visit(FunctionDecl fd) {			
 		Callable c = fmap.get(fd);
 		
-		/* put our frame on stack */
+		/* put our operation frame on stack */
 		if(c instanceof Function) {
 			Function f = (Function)c;
 			
@@ -212,41 +261,10 @@ public class AST2IL implements TreeVisitor {
 			/* traverse instructions */
 			fd.getBody().visitNode(this);
 			
+			// initialize the call frame
 			Function.Frame cframe = f.getFrame();
 			
-			if(!cframe.isEmpty()) {
-				kmap.put(cframe.getKlassName(), cframe);
-								
-				/* create constructor */
-				Function constr = cframe.newFunc(fd.getLine(),
-						"<init>", new FunctionType(Type.VOID), false );
-				
-				Variable<?> _self = 
-					constr.newArg(new Signature<KlassType>(
-							"_self", cframe.getType()) );
-				
-				Klass objklass = cframe.getBaseKlass();
-				Callable supconstr = objklass.get("<init>", Type.VOID);
-								
-				Call call;
-				constr.addOp( call = new Call(constr, fd.getLine(), 
-						supconstr, Call.Proto.NONVIRTUAL) );
-				call.addArgument( 
-					new VariableValue(constr, fd.getLine(), _self) );
-				constr.addOp( new ReturnVoid(constr, fd.getLine()) );
-				
-				/* invoke it */
-				f.addOp(
-					new Assignment(f, fd.getLine(),	f.getCallFrameVar(),
-						call = new Call(f, fd.getLine(), constr, Call.Proto.CONSTR) 
-					)
-				);				
-				
-				/* create the frame before call */				
-				call.addArgument( new CreateObject(f, 
-						fd.getLine(), cframe.getType()) );
-				
-			}
+			initCallFrame(fd.getLine(), cframe);			
 		
 			/* instructions are left on operation list */
 			while(moreOps())
@@ -267,6 +285,8 @@ public class AST2IL implements TreeVisitor {
 				
 		Variable<?> v = container().newVar(sig, !decl.isUsedNonLocally());
 		
+		this.ensureInstantiable(v.getSignature().type);
+		
 		/* add a maping to global symbol table */
 		vmap.put(decl, v);
 		
@@ -286,7 +306,9 @@ public class AST2IL implements TreeVisitor {
 		Signature<Type> sig = new Signature<Type>(
 				decl.getLocalID(), decl.getType());
 				
-		Variable v = ((Function)container()).get(sig);
+		Variable<?> v = ((Function)container()).get(sig);
+		
+		this.ensureInstantiable(v.getSignature().type);
 		
 		/* add a maping to global symbol table */
 		vmap.put(decl, v);		
@@ -319,18 +341,15 @@ public class AST2IL implements TreeVisitor {
 			
 			// we need to pass a callable, which is
 			// actually the closure's method
-			String ksig = Closure.PREFIX + v.getSignature().type.getShorthand();
+			this.ensureInstantiable(v.getSignature().type);
+
+			Klass klass = kmap.get(Closure.PREFIX + v.getSignature().type.getShorthand());			
+			Function _call = (Function)klass.get( new Signature<FunctionType>("_call", ft) );
+						
+			self = new VariableValue(container(), call.getLine(), 
+					this.remapSelf(v) );			
+			ref = _call;
 			
-			Klass klass = kmap.get(ksig);
-			if(klass == null) {
-				// create on runtime
-				klass = createKlassForClosure(ft);						
-				kmap.put(ksig, klass);
-			}
-			
-			ref = klass.get( new Signature<FunctionType>("_call", ft) );
-			
-			self = new VariableValue(container(), call.getLine(), v);
 			protocol = Call.Proto.VIRTUAL;
 		} else {
 			throw new CompilerException(String.format(
@@ -340,8 +359,9 @@ public class AST2IL implements TreeVisitor {
 		
 		Call c = new Call(container(), call.getLine(), ref, protocol);
 		
-		if(self != null)
+		if(self != null) {			
 			c.addArgument(self);
+		}
 		
 		for(ExprToken<? extends Type> e : call.getArgs()) {
 			e.visitNode(this);			
@@ -352,69 +372,127 @@ public class AST2IL implements TreeVisitor {
 		return;		
 	}
 
-	private static Klass createKlassForClosure(FunctionType type) {
-		
+	private static Klass createInterfaceForClosure(FunctionType type) 
+	{
+		/* this creates an interface for given type */
 		String ksig = Closure.PREFIX + type.getShorthand();
-		Klass klass = new Klass(ksig, true);			 
+		Klass klass = new Klass(ksig, true);
+		klass.addImplements("lang.jx.Closure");
+		
 		Function f = klass.newFunc(0, "_call", type, false);
-		
-		f.newArg( new Signature<Type>("_self", new KlassType(klass) ) );
-		
+				
 		int i=0;
 		for(Type t : type.getArgumentTypes()) 
 		{
-			f.newArg( new Signature<Type>("arg" + i, t) );
+			f.newArg( new Signature<Type>("arg" + i, t), true );
 			i++;
 		};
 		
+		KlassFieldRef x = klass.newClassVar("_type_signature", 
+				new Constant<String>(klass, 0, type.toString()) );
+		
 		return klass;
 	}
-
-	public void visit(ConstantExpr c) {
-		pushExpr(new Constant(container(), c.getLine(), 
-				c.getType(), c.getValue()) );
-	}
-
-	public void visit(VarExpr var) {
-		Variable<?> v = vmap.get(var.getRef());
-		
-		/* somehow we have to remap frame position 
-		 * to the closure pointer */
-		if( (v instanceof KlassField) 
-		 && (container() instanceof Function)
-		 && ((Function)container()).isLambda() )
+	
+	private void ensureInstantiable(Type t) 
+	{
+		if(t instanceof FunctionType) 
 		{
-			KlassField field  = (KlassField)v;
-			Variable<?> source = field.getSource();
-			Function lambda = (Function)container();
-			Closure closure = (Closure)lambda.container();
+			FunctionType ftype = (FunctionType) t;
 			
+			/* generate interface for closure conversion */
+			String ksig = Closure.PREFIX + ftype.getShorthand();
+			
+			Klass klass = kmap.get(ksig);
+			if(klass == null) {
+				// create on runtime
+				klass = createInterfaceForClosure(ftype);						
+				kmap.put(ksig, klass);
+			}
+		}
+	}
+	
+
+	private Variable<?> remapSelf(Variable<?> v)
+	{
+		if(xstack.peek().remap.containsKey(v))
+			return xstack.peek().remap.get(v);
+		
+		if(v instanceof KlassFieldRef) {
+			throw new CompilerException("ooops ?");			
+		}
+		
+		if(v instanceof KlassField)
+		{
+			/* This is the lambda bottom _call */ 
+			Function _call = (Function)container();
+			
+			/* the closure where resides parent call frame */
+			if(! (_call.container() instanceof Closure) ) return v;
+			
+			Closure closure = (Closure)_call.container();
+			
+			KlassField field  = (KlassField)v;
+			Variable<?> source = field.getSource();	
+			
+			if(source == null)
+				throw new CompilerException(
+					"AST2IL: Variable with null source or Unmatched Frame reference inside closure");
+
 			/* this variable needs to be able to access
 			 * it's source. We should find a coresponding
 			 * entry in the closure (if we are in one) */
-			boolean found = false;
 			
-			for(Variable<?> f : closure.allVariables())
+			Variable<?> frame;
+			for(Variable<?> cf : closure.allVariables())
 			{
-				if(f.getSignature().equals(source.getSignature()))
-				{
-					found = true;
-					/* make a new variable instance 
-					 * with diffrenr source */
-					KlassType kt = (KlassType) f.getSignature().type;
-					v = new KlassField(kt.getKlass(), f,
-							new Signature<Type>(v.getSignature()) );					
-					break;
+				if(! cf.matches(source) )
+					continue;
+				
+				if(cf instanceof KlassFieldRef) {
+					frame = ((KlassFieldRef)cf).deref(_call.getSelf());
 				}
+				else {
+					frame = cf;
+				}
+
+				/* make a new variable instance 
+				 * with diffrent source */				
+				KlassField nv = new KlassField(frame, field.template());						
+
+				xstack.peek().remap.put(v, nv);					
+				return nv;
 			}
-		
-			if(!found) 
-				throw new CompilerException(
-					"AST2IL: Unmatched Frame reference inside closure");			
 			
+			KlassField nsource = new KlassField(
+					closure.getParent().getCallFrameVar(), 
+					new KlassFieldRef(
+							closure.getParent().getFrame(),
+							source.getSignature(), false
+			));
+			
+			/* try to remap the source */			
+			KlassField nv = new KlassField(
+					this.remapSelf(nsource), field.template());
+			
+			xstack.peek().remap.put(v, nv);
+			return nv;										
 		}
+		
+		return v;		
+	}
+	
+	public void visit(ConstantExpr c) {
+		pushExpr(
+			new Constant(container(), c.getLine(), c.getValue()) );
+	}
+
+	
+	public void visit(VarExpr var) {
+		Variable<?> v = vmap.get(var.getRef());
+				
 		pushExpr( new VariableValue(container(),
-				var.getLine(), v) );		
+				var.getLine(), this.remapSelf(v)) );		
 	}
 
 	public void visit(InstrBlock ci) {
@@ -433,7 +511,9 @@ public class AST2IL implements TreeVisitor {
 	}
 
 	public void visit(AssignmentInstr as) {
-		Variable v = vmap.get(as.getRef());
+		Variable<?> v = vmap.get(as.getRef());
+		
+		v = this.remapSelf(v);
 		
 		as.getValue().visitNode(this);		
 		Expression<? extends Type> e = popExpr();
@@ -551,11 +631,12 @@ public class AST2IL implements TreeVisitor {
 	}
 
 	public void visit(LambdaExpr lambda) {					
-		// TODO: double check this
-				
+						
 		Closure closure = new Closure((Function)container());
 		kmap.put(closure.getKlassName(), closure);
 		
+		/* lambda call function - this will be called
+		 * later with normal arguments */
 		Signature<FunctionType> sig = 
 			new Signature<FunctionType>(
 				"_call", (FunctionType)lambda.getType() );
@@ -563,19 +644,52 @@ public class AST2IL implements TreeVisitor {
 		Function f = new Function(closure, 
 				lambda.getLine(), sig, false, false, true);
 		
-		closure.produceLambda(f);
+		ensureInstantiable(f.declSignature().type);
+		
+		/* lambda construction */
+		closure.produceLambda(f);		
 		
 		xstack.push( new Frame(f) );		
-		f.newArg( new Signature<KlassType>("_self", closure.getType()) );
+		Variable<?> _self = f.getSelf();
 		
 		/* map arguments */
 		for(ArgumentDecl vd : lambda.getArgs()) {
-			f.newArg(new Signature<Type>(vd.getLocalID(), vd.getType()) );
+			f.newArg(new Signature<Type>(vd.getLocalID(), vd.getType()),
+					!vd.isUsedNonLocally() );
 			vd.visitNode(this);						
 		}
 		
 		/* traverse instructions */
 		lambda.getBody().visitNode(this);	
+				
+		// our call frame
+		Function.Frame cframe = f.getFrame();
+		
+		/* during traverse of instructions, some remaps might have happened 
+		 * some variables want not our frame, but our parents. 
+		 * In this case we need to provide the parent frame in our frame. */
+		
+		/* Closure's instance field holding the call frame value */
+		KlassFieldRef pcall_frame = closure.getParentCallFrame();
+		
+		/* Add a copy to our call frame */
+		KlassFieldRef pcf_ref = 
+			cframe.newInstanceVar(pcall_frame.getSignature(), false);
+		
+		/* XXX :init the call frame */
+		initCallFrame(lambda.getLine(), cframe);
+		
+		/* copy from closure to our call frame */
+		{
+			
+			VariableValue v = new VariableValue(
+				f, lambda.getLine(), pcall_frame.deref(_self) ); 
+			
+			Assignment a = new Assignment(f, lambda.getLine(),
+				pcf_ref.deref(f.getCallFrameVar()), v);
+			
+			f.addOp(a);
+		}					
 		
 		/* instructions are left on operation list */
 		while(moreOps())
@@ -608,9 +722,11 @@ public class AST2IL implements TreeVisitor {
 		/* second is the function's frame */				
 		invk.addArgument( new VariableValue(
 			container(), lambda.getLine(), ((Function)container()).getCallFrameVar()) );
-				
+						
 		pushExpr(invk);						
 	}
+	
+	
 
 	
 

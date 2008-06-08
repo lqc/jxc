@@ -161,8 +161,26 @@ public class ScopeAnalyzer implements TreeVisitor {
 		// if the path is relative to context 
 		if(path.isRelative()) {
 			VarDecl d = c.getVariable(path.basename());
-			if(!callee.equals(d.getStaticContext()) )
-				d.markNonLocalUsage();
+			
+			if(d == null) return null; 
+						
+			Context cur = callee; // callee is under declaration context
+			Context decl = d.getStaticContext();
+			
+			/* TODO: <RETURN> variable seems have wrong initial SL */
+			if(decl != null)
+			{
+				boolean lambda = false;
+				while(cur != null && !cur.equals(decl)) {
+					if(cur.name.equals("<lambda>")) lambda = true;
+					cur = cur.parent;										
+				}
+				
+				if(cur == null) /* this can't happend */
+					throw new CompilerException("[INTERNAL] Found variable, but can't find it's context above us.");
+				
+				if(lambda) d.markNonLocalUsage();
+			}				
 			
 			return d;			
 		}
@@ -411,10 +429,7 @@ public class ScopeAnalyzer implements TreeVisitor {
 			}
 			
 			// we can apply - cast is safe 
-			ref = new MethodRef(closure, "<call>", alpha);
-			
-			// we must export this somewhere ??
-			
+			ref = new MethodRef(closure, "<call>", alpha);			
 		} catch(ElementNotFoundException e) {
 			try {
 				ref = lookupCallable(call.getFid(), alpha);				
@@ -491,7 +506,6 @@ public class ScopeAnalyzer implements TreeVisitor {
 									.getType().toString(), instr.getId(), d
 									.getType().toString())));
 			instr.setValue(e);
-
 		} catch (ElementNotFoundException e) {
 			throw new SyntaxErrorException(instr, String.format(
 					"ScopeAnalyzer->Assign: No match for variable '%s' in current scope.\n", instr
@@ -547,17 +561,11 @@ public class ScopeAnalyzer implements TreeVisitor {
 
 		fc = new FunctionCall(instr.getLine(), instr.getColumn(), "_ADD", ve, ce);
 
-		AssignmentInstr as;		
-		instr.setAction(as = new AssignmentInstr(instr.getLine(), instr
-				.getColumn(), d.getAbsoluteID(), fc));
+		AssignmentInstr as = new AssignmentInstr(instr.getLine(), instr
+				.getColumn(), d.getAbsoluteID(), fc);
 		
 		as.visitNode(this);
-		
 		instr.setAction(as);
-		
-		//fc.bindStaticContext(current);
-		//fc.bindRef(fd);		
-		/* } */
 	}
 
 	public void visit(LoopInstr loop) {

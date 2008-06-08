@@ -6,18 +6,12 @@ import org.lqc.jxc.types.KlassType;
 import org.lqc.jxc.types.Type;
 
 public class Closure extends Klass {
-	
-	/**
-	 * TODO:
-	 *  odwrócić kolejność przy set field
-	 *  dodać 'dup' przy konstruktorach
-	 */ 
-	
+		
 	public static final String PREFIX = "Closure";
 	
 	public Closure(Function p) {
 		super(p.getUniqueLambdaName(), false);		
-		this.external = true;		
+		this.external = false;		
 		this.parent = p;
 		this.slink = p;
 		
@@ -27,20 +21,30 @@ public class Closure extends Klass {
 	private Function parent;
 	private Function def_constr;
 	
-	public void produceLambda(Function f) {
-		addImplements(PREFIX + f.signature.type.getShorthand() );
-				 
+	private KlassFieldRef pcall_frame;
+	
+	public Function getParent() {
+		return parent;
+	}
+	
+	public void produceLambda(Function f) 
+	{				 
 		/* put the call */
 		this.fmap.put(f.signature, f);
-		
+				
+		this.addImplements(Closure.PREFIX + f.signature.type.getShorthand());
+				
 		/* we also need a constructor to wrap the frame */
 		Function.Frame frame = parent.frame;
 		Signature<FunctionType> sig;
 		
-		/* we need a field to hold the frame */
+		/* we need a field to hold the frame */		
 		Signature<KlassType> fieldsig = 
 			new Signature<KlassType>(
-				parent.callFrameVar.signature.name, frame.getType());
+				parent.callFrameVar.getLocalName(), frame.getType());
+		
+		/* it might happen, that we need this 
+		 * in our own frame - handle this later */
 								
 		sig = new Signature<FunctionType>("<init>",
 			new FunctionType(Type.VOID, frame.getType()) );
@@ -50,13 +54,13 @@ public class Closure extends Klass {
 		
 		def_constr = constr;
 		
-		Variable<?> _self = constr.newArg( 
-				new Signature<KlassType>("_self", this.getType()) );
+		Variable<?> _self = constr.getSelf();				
 		Variable<?> frame_arg = constr.newArg(
-				new Signature<KlassType>("frame", frame.getType()) );
+				new Signature<KlassType>("_parent_frame", frame.getType()), true );
 		
-		Variable<Klass> frame_field = 
-			this.newInstanceVar(_self, fieldsig, false);
+		/* We need the local self, so this is a var template */
+		pcall_frame = this.newInstanceVar(fieldsig, false);		
+		Variable<?> frame_field = pcall_frame.deref(_self);
 		
 		Callable superconstr = this.getBaseKlass().get(
 			new Signature<FunctionType>("<init>",new FunctionType(Type.VOID))
@@ -78,6 +82,9 @@ public class Closure extends Klass {
 		return def_constr;
 	}
 
+	public KlassFieldRef getParentCallFrame() {
+		return this.pcall_frame;
+	}
 	public <T> void visit(ILVisitor<T> v) {
 		v.process(this);
 	}

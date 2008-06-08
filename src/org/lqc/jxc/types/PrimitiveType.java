@@ -30,7 +30,7 @@ public abstract class PrimitiveType extends Type {
 	
 	@Override
 	public String toString() {
-		return "p:"+ name;
+		return name;
 	}	
 	
 }

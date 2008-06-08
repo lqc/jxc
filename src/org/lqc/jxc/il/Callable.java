@@ -11,5 +11,4 @@ public interface Callable {
 	
 	public boolean isStatic();
 	public boolean isAbstract();
-
 }

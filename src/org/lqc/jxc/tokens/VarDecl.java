@@ -20,6 +20,7 @@ public class VarDecl<T extends Type> extends Declaration<T> {
 			initialValue = ExprToken.VOID(t);
 		else
 			initialValue = ExprToken.NULL(t);
+		nonlocal = false;
 	}
 
 	protected ExprToken<? extends T> initialValue;

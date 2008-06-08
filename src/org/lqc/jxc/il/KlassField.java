@@ -4,13 +4,15 @@ import org.lqc.jxc.types.Type;
 
 public class KlassField extends Variable<Klass> {
 	
-	protected Variable<?> source; 
+	protected Variable<?> source;
+	protected KlassFieldRef template;
 	
-	public KlassField(Klass k, Variable<?> instance, 
-			Signature<? extends Type> sig) {
-		super(k, -1, sig);
+	public KlassField(Variable<?> instance, KlassFieldRef ref)
+	{	
+		super(ref.slink, -1, ref.signature);
 		
 		source = instance;
+		template = ref;
 	}
 	
 	@Override
@@ -21,7 +23,7 @@ public class KlassField extends Variable<Klass> {
 	}
 	
 	public String getAccessName() {
-		return slink.getKlassName() + "/" + signature.name;
+		return slink.getAbsoluteName() + "/" + signature.name;
 	}
 
 	public Variable<?> getSource() {
@@ -32,4 +34,7 @@ public class KlassField extends Variable<Klass> {
 		this.source = source;
 	}
 	
+	public KlassFieldRef template() {
+		return template;
+	}
 }

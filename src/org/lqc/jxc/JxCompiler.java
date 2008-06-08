@@ -32,24 +32,54 @@ public class JxCompiler {
 	public static void main(String[] args) 
 		throws IOException 
 	{
-		System.exit( compile(args[0].trim()) );
+		int ret;
+		File temp;
+				
+		temp = new File( new File("."), "jxc_build");
+		temp.delete();
+		temp.mkdirs();		
+		
+		File[] files = compile(args[0].trim(), temp);
+		
+		if(files == null)
+			System.exit(1);
+		
+//		StringBuilder paths = new StringBuilder();		
+//		int i=0;		
+//		for(File f : files)
+//		{
+//			paths.append(f.getAbsolutePath());
+//			paths.append(" ");
+//		}
+		
+		System.out.println("Assembling...");				
+		
+		ProcessBuilder pb = new ProcessBuilder();
+		pb.directory(temp);
+		pb.command("java", "-jar", "E:\\workspaces\\mimuw\\jxc\\rtlib\\jasmin.jar", "*.j");
+			
+		Process jasmin = pb.start();
+		
+		System.out.println("Done.");		
+		System.exit(0);
 	}
 	
 	
-	public static int compile(String path) throws IOException		
+	public static File[] compile(String path, File outdir) 
+		throws IOException		
 	{		
+		File[] outs = null;		
+		int current;
 		File in;
-		File out;
+		
 		String fname;
-		int retcode = 0;
 		
 		System.out.printf("jxCompiler version %d.%d\n",
 				MAJOR_VERSION, MINOR_VERSION);
 		
 		in = new File(path);
 		fname = in.getName();
-		fname = fname.substring(0, fname.indexOf("."));
-		out = new File(fname + ".j", ".");		
+		fname = fname.substring(0, fname.indexOf("."));		
 		
 		try {
 			/* files opended, go to parse phase */			
@@ -73,37 +103,40 @@ public class JxCompiler {
 			/* Transform to high-level IL. Single CU yields a module. */
 			System.out.println("Converting to IL...");
 			Collection<Klass> klist = AST2IL.convert(cu, exts.values());
-						
+			
+			outs = new File[klist.size()];
+									
 			/* TODO: flow analysis */
+			int i = 0;
 			for(Klass klass : klist) {				
 				ILFlowAnalyzer ilfa = new ILFlowAnalyzer();
 				
-				ilfa.analyze(klass);
-							
+				ilfa.analyze(klass);				
 				/* generate Jasmin from IL Tree */
+				
 				FileOutputStream s;
-				out = new File(klass.getKlassName() + ".j");
+				outs[i] = new File(outdir, klass.getKlassName() + ".j");
 			
 				System.out.println("Generating Jasmin for klass: " + klass);
 				IL2Jasmin conv = new IL2Jasmin(
 					new PrintStream(
-					s = new FileOutputStream(out)) );
+					s = new FileOutputStream(outs[i])) );
 			
 				conv.emmit(klass);
 				s.close();
-			}			
-				
+				i++;
+			}					
 		} catch(FileNotFoundException e) {
-			System.out.printf("[Error] Input file '%s' not found.", in.getPath());
-			retcode = 1;
+			System.out.printf("[Error] " + e.getMessage());
+			outs = null;
 		} catch(CompilerException e) {
 			System.out.println(e.getMessage());
-			retcode = 1;						
+			outs = null;						
 		} catch(Exception e) {
 			e.printStackTrace();
-			retcode = 1;			
+			outs = null;			
 		}	
 		
-		return retcode;		
+		return outs;
 	}
 }

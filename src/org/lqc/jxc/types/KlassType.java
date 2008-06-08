@@ -43,5 +43,9 @@ public class KlassType extends Type {
 		this.klass = klass;
 	}
 	
+	public String toString() {
+		return "&" + klass.getAbsoluteName() + ";"; 
+	}
+	
 
 }

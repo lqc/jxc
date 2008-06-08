@@ -16,6 +16,7 @@ import org.lqc.jxc.il.Expression;
 import org.lqc.jxc.il.Function;
 import org.lqc.jxc.il.Klass;
 import org.lqc.jxc.il.KlassField;
+import org.lqc.jxc.il.KlassFieldRef;
 import org.lqc.jxc.il.Label;
 import org.lqc.jxc.il.Loop;
 import org.lqc.jxc.il.Nop;
@@ -52,7 +53,7 @@ public class IL2Jasmin {
 			out.printf(".class public %s\n", 
 					m.getKlassName().replace('.', '/') );
 			out.printf(".super %s\n", 
-					m.getBaseKlass().name().replace('.', '/') );
+					m.getBaseKlass().getKlassName().replace('.', '/') );
 			
 			if(!m.getImplementsNames().isEmpty()) {
 				out.printf(".implements ");
@@ -84,17 +85,38 @@ public class IL2Jasmin {
 		else {
 			out.printf(".interface public %s\n", 
 					m.getKlassName().replace('.', '/'));
-			out.printf(".super java/lang/Object\n\n");	
+			
+			out.printf(".super java/lang/Object\n\n");
+						
+			if(!m.getImplementsNames().isEmpty()) {
+				out.printf(".implements ");
+				for(String name : m.getImplementsNames())
+				{
+					out.print(name.replace('.', '/'));
+					out.print(" ");
+				}
+				out.print("\n");					
+			}
 		}
 		
 		// fields
 		out.printf("\n; Fields\n");
-		for(Variable<?> field : m.allVariables())
+		KlassFieldRef field;
+		for(Variable<?> var : m.allVariables())
 		{
-			out.printf(".field %s %s %s\n",
+			if(! (var instanceof KlassFieldRef) )
+				throw new CompilerException("[IL2Jasmin] emmitKlass fatal oops.");
+			
+			field = (KlassFieldRef) var;
+			
+			out.printf(".field %s %s %s %s %s\n",
 					"public",
+					(m.isInterface() ? "final static" :
+						(!field.isDereferable() ? "static" : "")),						
 					field.getSignature().name,
-					JType.fromILType(field.getSignature().type)
+					JType.fromILType(field.getSignature().type),
+					(field.initialValue() == null ? "" :
+						"= " + field.initialValue())
 			);
 		}
 		
@@ -181,15 +203,56 @@ public class IL2Jasmin {
 		if(op instanceof Assignment) {
 			Assignment a = (Assignment)op;
 			
-			this.emmit(a.getArgument(), depth + 1);		
-			if(depth > 0) out.print("dup\n");
+			Variable<?> ref = a.getTarget();
+			JType vtype = JType.fromILType(ref.getSignature().type);
 			
-			emmitStoreValue(a.getTarget());
+			if(ref instanceof KlassFieldRef) {
+				KlassFieldRef kref = (KlassFieldRef) ref;
+				
+				if(kref.isDereferable()) {
+					throw new CompilerException(
+					"Trying to access instance variable as static.");
+				}
+				
+				out.printf("putstatic %s %s\n",
+						kref.getAccessName(),
+						vtype.toString()
+				);			
+			}
+			if(ref instanceof KlassField) {
+				KlassField field = (KlassField)ref;
+				Klass k = field.slink();
+				
+				this.emmitLoadValue(field.getSource());
+				this.emmit(a.getArgument(), depth + 1);		
+				
+				out.printf("putfield %s %s\n",
+					field.getAccessName(), 
+					vtype.toString() );					
+				
+				if(depth > 0) {
+					// load the value back
+					this.emmitLoadValue(field);					
+				}				
+			} else {
+				Function f = (Function)ref.slink();
+				int i = f.getLVMap()[ref.localID()];
+				
+				this.emmit(a.getArgument(), depth + 1);	
+				if(depth > 0) {
+					out.printf("dup%c\n", 
+							(vtype.opsize() == 1? ' ' : '2') );
+				}	
+				
+				out.printf("%s\n", vtype.storeVar(i)); 
+			}			
+			
 			return;
 		}
 		
 		if(op instanceof Call) {
 			Call c = (Call)op;
+						
 						
 			for(Expression<? extends Type> e : c.args()) {
 				this.emmit(e, depth + 1);
@@ -199,9 +262,15 @@ public class IL2Jasmin {
 				out.printf("%s\n", ((Builtin)c.target()).getContents(c.slink()));
 			}
 			else {
+				Function f = (Function)c.target();
+				
+				int k = 0;
+				//sum opcodes
+				for(Type t : f.callSignature().type.getArgumentTypes())
+					k += JType.sizeof(t);
+				
 				String cnt = 
-					(!c.target().container().isInterface() ? "" : 
-						String.valueOf(c.target().callSignature().type.getArity()) );
+					(!c.target().container().isInterface() ? "" : String.valueOf(k) );
 				
 				switch(c.protocol()) {
 					case STATIC:
@@ -209,7 +278,7 @@ public class IL2Jasmin {
 								c.target().container().getKlassName().replace('.', '/'),
 								JType.methodSignature(c.target().declSignature()) );
 						break;
-					case CONSTR:											
+					case CONSTR:						
 						out.printf("invokespecial %s/%s\n",
 								c.target().container().getKlassName(),								
 								JType.methodSignature(c.target().declSignature()) );
@@ -235,7 +304,8 @@ public class IL2Jasmin {
 		{
 			out.printf("new %s\n", 
 				((CreateObject)op).getType().getKlass().getKlassName()
-			);		
+			);
+			out.print("dup\n");
 			return;
 		}
 	
@@ -340,6 +410,8 @@ public class IL2Jasmin {
 		throw new CompilerException("Unknown operation to emmit: " + op);
 	}
 	
+	
+	@Deprecated
 	private void emmitStoreValue(Variable<?> ref) {
 		JType vtype = JType.fromILType(ref.getSignature().type);
 		
@@ -348,6 +420,7 @@ public class IL2Jasmin {
 			Klass k = field.slink();
 			
 			this.emmitLoadValue(field.getSource());
+			out.printf("swap\n");
 			out.printf("putfield %s %s\n",
 				field.getAccessName(), 
 				vtype.toString() );					
@@ -359,10 +432,24 @@ public class IL2Jasmin {
 		}		
 	}
 	
+	
 	private void emmitLoadValue(Variable<?> ref) {
 		JType vtype = JType.fromILType(ref.getSignature().type);
-		
-		if(ref instanceof KlassField) {
+				
+		if(ref instanceof KlassFieldRef) {
+			KlassFieldRef kref = (KlassFieldRef) ref;
+			
+			if(kref.isDereferable()) {
+				throw new CompilerException(
+				"Trying to access instance variable as static.");
+			}
+			
+			out.printf("getstatic %s %s\n",
+					kref.getAccessName(),
+					vtype.toString()
+			);			
+		}
+		else if(ref instanceof KlassField) {
 			KlassField field = (KlassField)ref;
 			Klass k = field.slink();
 			
@@ -375,7 +462,8 @@ public class IL2Jasmin {
 			int i = f.getLVMap()[ref.localID()];
 			
 			out.printf("%s\n", vtype.loadVar(i)); 
-		}		
+		}	
+		 
 	}
 	
 	private void emmitCondition(Expression<? extends Type> cond, Label t, Label f) {
@@ -484,7 +572,7 @@ public class IL2Jasmin {
 			TypeConversion cast = (TypeConversion)op;
 			
 			return Math.max(
-					JType.sizeof(cast.srcType()), 
+					calculateMaxStack( cast.getInnerExpr()),  
 					JType.sizeof(cast.dstType())
 			);
 		}

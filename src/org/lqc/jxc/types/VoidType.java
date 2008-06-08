@@ -6,7 +6,7 @@ class VoidType extends Type {
 	
 	@Override
 	public String toString() {
-		return "<void>";
+		return "void";
 	}
 
 	public Relation compareTo(Type object) {		

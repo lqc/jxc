@@ -23,10 +23,8 @@ public interface StaticContainer<T extends StaticContainer<T>> {
 	
 	public Label getUniqueLabel();
 	public String getUniqueLambdaName();
-	
-	public String absolutePath();
-	public String name();	
-	
-	public Klass getNearestKlass();	
+		
+	public Klass getNearestKlass();
+	public String getAbsoluteName();
 	
 }

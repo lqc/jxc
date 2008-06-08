@@ -23,6 +23,8 @@ public class Call extends Expression<Type>
 		last = 0;
 		
 		proto = p;
+		if( p.equals(Proto.CONSTR) )
+			this.type = target.callSignature().type.getArgumentTypes().get(0);
 	}	
 	
 	protected Callable target;	

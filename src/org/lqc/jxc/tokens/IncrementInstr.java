@@ -57,8 +57,9 @@ public class IncrementInstr extends ExprToken {
 	/**
 	 * @param action the action to set
 	 */
-	public void setAction(Instruction action) {
+	public void setAction(AssignmentInstr action) {
 		this.action = action;
+		this.valueType = action.getType();
 	}
 
 }

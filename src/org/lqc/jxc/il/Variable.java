@@ -59,4 +59,16 @@ public class Variable<C extends StaticContainer<C>> {
 		return slink;
 	}	
 			
+	public String getAbsoluteName() {
+		return slink.getAbsoluteName() + "/" + signature.name;
+	}
+	
+	public String getLocalName() {
+		return signature.name;
+	}
+	
+	public boolean matches(Variable<?> v) {
+		return signature.equals(v.signature);		
+	}
+	
 }

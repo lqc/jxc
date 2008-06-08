@@ -14,8 +14,9 @@ import org.lqc.jxc.il.Closure;
 import org.lqc.jxc.il.Constant;
 import org.lqc.jxc.il.Expression;
 import org.lqc.jxc.il.Function;
-import org.lqc.jxc.il.Loop;
 import org.lqc.jxc.il.Klass;
+import org.lqc.jxc.il.KlassField;
+import org.lqc.jxc.il.Loop;
 import org.lqc.jxc.il.Operation;
 import org.lqc.jxc.il.Return;
 import org.lqc.jxc.il.ReturnVoid;
@@ -62,27 +63,40 @@ public class ILFlowAnalyzer extends AbstractILVisitor<ILFlowAnalyzer.FlowContext
 		public TriStateLogic returnState;
 		
 		public Info getVarInfo(Variable v) {
+			if(v instanceof KlassField) {
+				return vmap.get( ((KlassField)v).template() );
+			}
 			return vmap.get(v);
 		}
 		
 		public void putVarInfo(Variable v, Info i) {
-			vmap.put(v, i);
+			if(v instanceof KlassField) 
+				vmap.put( ((KlassField)v).template(), i );			
+			else 
+				vmap.put(v, i);
 		}
 	}
 	
-	private HashMap<Variable, Info> vmap;
+	private HashMap<Variable<?>, Info> vmap;
 	// private HashMap<Function, Info> fmap;
 	
 	public ILFlowAnalyzer() {
 		super();
 		
-		vmap = new HashMap<Variable, Info>();		
+		vmap = new HashMap<Variable<?>, Info>();		
 		// fmap = new HashMap<Function, Info>();
 	}
 	
 	public void analyze(Klass m) 
 	{
 		if(m.isInterface() || m.isExternal()) return;
+		
+		if(m instanceof Closure) return;
+		
+		for(Variable<?> v : m.allVariables())
+		{
+			vmap.put(v, new Info());
+		}
 		
 		for(Callable c : m.allCallables())
 		{

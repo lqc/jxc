@@ -52,6 +52,7 @@ public class AssignmentInstr extends ExprToken<Type> {
 
 	public void setValue(ExprToken<? extends Type> e) {
 		this.value = e;		
+		this.valueType = e.getType();
 	}
 
 }

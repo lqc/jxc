@@ -1,5 +1,6 @@
 package org.lqc.jxc.javavm;
 
+import java.lang.reflect.Field;
 import java.util.Locale;
 
 import org.lqc.jxc.CompilerException;
@@ -8,6 +9,7 @@ import org.lqc.jxc.types.FunctionType;
 import org.lqc.jxc.types.KlassType;
 import org.lqc.jxc.types.PrimitiveType;
 import org.lqc.jxc.types.Type;
+import org.lqc.jxc.types.TypeParser;
 
 /** Types supported natively by JVM. */
 public class JType {	
@@ -52,24 +54,41 @@ public class JType {
 	}
 	
 	public static Type toILType(Class<?> cls) {
+		Type t = null;
+		
 		if(cls.equals(Integer.TYPE))
-			return PrimitiveType.INT;
+			t = PrimitiveType.INT;
+		else if(cls.equals(Boolean.TYPE))
+			t = PrimitiveType.BOOLEAN;
+		else if(cls.equals(Double.TYPE))
+			t = PrimitiveType.REAL;
+		else if(cls.equals(Void.TYPE))
+			t = PrimitiveType.VOID;
+		else if(cls.equals(String.class))
+			t = PrimitiveType.STRING;
+		else if(cls.isInterface() 
+			&& lang.jx.Closure.class.isAssignableFrom(cls)) 
+		{
+			try {
+				Field f = cls.getField("_type_signature");				 
+				t = TypeParser.parse( (String) f.get(null) );
+			} catch (SecurityException e) {				
+				e.printStackTrace();
+			} catch (NoSuchFieldException e) {
+				e.printStackTrace();
+			} catch (IllegalArgumentException e) {				
+				e.printStackTrace();
+			} catch (IllegalAccessException e) {
+				e.printStackTrace();
+			}			
+		}
 		
-		if(cls.equals(Boolean.TYPE))
-			return PrimitiveType.BOOLEAN;
-		
-		if(cls.equals(Double.TYPE))
-			return PrimitiveType.REAL;
-		
-		if(cls.equals(Void.TYPE))
-			return PrimitiveType.VOID;
-		
-		if(cls.equals(String.class))
-			return PrimitiveType.STRING;
-		
-		/*if(cls.isAnnotationPresent()))
-			return PrimitiveType.BOOLEAN; */
-		return null;		
+		if(t == null)
+			System.out.println("[Warning] Couldn't covert " + cls.getCanonicalName());
+		else
+			System.out.printf("JType %s is %s\n", cls.getCanonicalName(), t.toString());
+				
+		return t;
 	}
 	
 	public static JType fromILType(Type t) {

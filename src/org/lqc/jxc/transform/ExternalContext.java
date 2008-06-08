@@ -25,7 +25,7 @@ public class ExternalContext extends Context {
 				this.put( new ExternalFuncDecl(c) );
 		} catch (NonUniqueElementException e) {
 			throw new CompilerException("Malformed external module: " 
-					+ m.absolutePath() );
+					+ m.getAbsoluteName() );
 		}
 	}	
 	
