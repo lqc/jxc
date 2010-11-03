@@ -1,0 +1,4 @@
+*.class
+jxlib/bin
+jxtests/bin
+jxtests/temp
